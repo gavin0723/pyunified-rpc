@@ -10,6 +10,8 @@ class Bool(object):
     def __init__(self, trues, falses):
         """Create a new Bool type
         """
+        self.trues = trues
+        self.falses = falses
 
 boolean = Bool([ '1', 'true', 'yes', 'on' ], [ '0', 'false', 'no', 'off' ])
 

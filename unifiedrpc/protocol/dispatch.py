@@ -18,3 +18,8 @@ class Dispatch(object):
         self.params = params
         self.attrs = kwargs
 
+    def __getattr__(self, key):
+        """Get the attribute
+        """
+        return self.attrs[key]
+

@@ -7,7 +7,5 @@ This adapter implements a full http web service functionalities that could be us
 
 """
 
+from adapter import GeventWebAdapter
 from decorators import *
-from error import *
-
-

@@ -4,53 +4,39 @@
 """the web adapter decorators
 """
 
-from definition import HTTP_METHOD_GET, HTTP_METHOD_POST, HTTP_METHOD_PUT, HTTP_METHOD_DELETE, HTTP_METHOD_HEAD, HTTP_METHOD_OPTIONS, \
-        ENDPOINT_CHILDREN_WEBENDPOINT_KEY
+from definition import HTTP_METHOD_GET, HTTP_METHOD_POST, HTTP_METHOD_PUT, HTTP_METHOD_DELETE, HTTP_METHOD_HEAD, HTTP_METHOD_OPTIONS
 
 from endpoint import WebEndpoint
 
-def endpoint(**kwargs):
-    """The web endpoint
-    """
-    webEndpoint = WebEndpoint(**kwargs)
-    def decorate(endpoint):
-        """Decorate the endpoint
-        """
-        if ENDPOINT_CHILDREN_WEBENDPOINT_KEY in endpoint.children:
-            endpoint.children[ENDPOINT_CHILDREN_WEBENDPOINT_KEY][webEndpoint.id] = webEndpoint
-        else:
-            endpoint.children[ENDPOINT_CHILDREN_WEBENDPOINT_KEY] = { webEndpoint.id: webEndpoint }
-        # Done
-        return endpoint
-    return decorate
+webEndpoint = WebEndpoint
 
-def get(**kwargs):
+def get(path, **kwargs):
     """The web get endpoint
     """
-    return endpoint(method = HTTP_METHOD_GET, **kwargs)
+    return webEndpoint(path, method = HTTP_METHOD_GET, **kwargs)
 
-def post(**kwargs):
+def post(path, **kwargs):
     """The web post endpoint
     """
-    return endpoint(method = HTTP_METHOD_POST, **kwargs)
+    return webEndpoint(path, method = HTTP_METHOD_POST, **kwargs)
 
-def put(**kwargs):
+def put(path, **kwargs):
     """The web put endpoint
     """
-    return endpoint(method = HTTP_METHOD_PUT, **kwargs)
+    return webEndpoint(path, method = HTTP_METHOD_PUT, **kwargs)
 
-def delete(**kwargs):
+def delete(path, **kwargs):
     """The web delete endpoint
     """
-    return endpoint(method = HTTP_METHOD_DELETE, **kwargs)
+    return webEndpoint(path, method = HTTP_METHOD_DELETE, **kwargs)
 
-def head(**kwargs):
+def head(path, **kwargs):
     """The web head endpoint
     """
-    return endpoint(method = HTTP_METHOD_HEAD, **kwargs)
+    return webEndpoint(path, method = HTTP_METHOD_HEAD, **kwargs)
 
-def options(**kwargs):
+def options(path, **kwargs):
     """The web options endpoint
     """
-    return endpoint(method = HTTP_METHOD_OPTIONS, **kwargs)
+    return webEndpoint(path, method = HTTP_METHOD_OPTIONS, **kwargs)
 
