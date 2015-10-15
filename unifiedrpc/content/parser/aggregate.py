@@ -18,7 +18,7 @@ class AggregateContentParser(ContentParser):
         Parameters:
             parsers                 A tuple (mimeType, parser)
         """
-        self.parsers = {}
+        self.parsers = parsers or {}
 
     def __contains__(self, mimeType):
         """Check mimeType
@@ -59,7 +59,7 @@ class AggregateContentParser(ContentParser):
         """
         parser = self.get(context.request.content.mimeType)
         if not parser:
-            raise UnsupportedMediaTypeError(context.request.context.mimeType)
+            raise UnsupportedMediaTypeError(context.request.content.mimeType)
         # Parse
         return parser.parse(context)
 

@@ -23,7 +23,8 @@ except ImportError:
     sys.path.insert(0, dirname(dirname(dirname(abspath(__file__)))))
     import unifiedrpc
 
-from unifiedrpc import Server, Service, endpoint, CONFIG_RESPONSE_MIMETYPE, CONFIG_RESPONSE_CONTENT_CONTAINER
+from unifiedrpc import Context, Server, Service, endpoint, CONFIG_RESPONSE_MIMETYPE, CONFIG_RESPONSE_CONTENT_CONTAINER
+from unifiedrpc.errors import BadRequestError
 from unifiedrpc.content.container import APIContentContainer
 from unifiedrpc.adapters.web import GeventWebAdapter, get, post, put, delete
 
@@ -43,6 +44,17 @@ class SimpleService(Service):
         """Get all persons
         """
         return self.persons
+
+    @put('/')
+    @endpoint()
+    def addPersion(self):
+        """Add a persion
+        """
+        ctx = Context.current()
+        if not ctx.request.content.data or not isinstance(ctx.request.content.data, dict) or not 'name' in ctx.request.content.data:
+            raise BadRequestError
+        name = ctx.request.content.data['name']
+        self.persons.append(name)
 
 if __name__ == '__main__':
 

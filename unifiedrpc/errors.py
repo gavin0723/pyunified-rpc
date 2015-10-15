@@ -43,6 +43,10 @@ class BadRequestParameterError(BadRequestError):
         """
         return '%s: #%s - [%s] - [%s] - [%s]' % (type(self).__name__, self.code or '', self.parameter, self.reason or '', self.detail or '')
 
+class BadRequestContentError(BadRequestError):
+    """The bad request content error
+    """
+
 class UnauthorizedError(RPCError):
     """The unauthorized error
     """

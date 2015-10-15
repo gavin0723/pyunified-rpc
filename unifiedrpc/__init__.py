@@ -15,3 +15,4 @@ from errors import *
 from protocol import Context
 from service import Service
 from server import Server, GeventServer
+from protocol import Context

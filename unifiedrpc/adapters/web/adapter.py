@@ -35,6 +35,7 @@ from request import WebRequest
 ERROR_BINDINGS = {
     BadRequestError:                400,
     BadRequestParameterError:       400,
+    BadRequestContentError:         400,
     UnauthorizedError:              401,
     ForbiddenError:                 403,
     NotFoundError:                  404,
@@ -311,7 +312,14 @@ class GeventWebAdapter(WebAdapter):
         super(GeventWebAdapter, self).startAsync(onRequestCallback, onErrorCallback, endpoints)
         # Start gevent wsgi server
         from gevent import pywsgi
-        self.server = pywsgi.WSGIServer((self.host, self.port), self)
+        # Get logger
+        serverLogger = logging.getLogger('unifiedrpc.adapter.web.gevent')
+        self.server = pywsgi.WSGIServer(
+            (self.host, self.port),
+            self,       # The application callable object
+            log = pywsgi.LoggingLogAdapter(serverLogger, logging.INFO),
+            error_log = pywsgi.LoggingLogAdapter(serverLogger, logging.ERROR),
+            )
         self.server.start()
         # Log it
         self.logger.info('Gevent WSGI server starts service at %s:%d', self.host, self.port)

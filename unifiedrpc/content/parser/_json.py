@@ -4,9 +4,12 @@
 """The json content parser
 """
 
+import logging
+
 import mime
 
-from unifiedrpc.util import json
+from unifiedrpc.util import json, JSONDecodeError
+from unifiedrpc.errors import BadRequestContentError
 
 from base import ContentParser
 
@@ -17,7 +20,14 @@ class JsonContentParser(ContentParser):
         mime.APPLICATION_JSON,
     ]
 
-    def parse(self, request):
+    logger = logging.getLogger('unifiedrpc.content.parser.json')
+
+    def parse(self, context):
         """Parse the request content
         """
-        return json.load(request.content.stream, encoding = request.content.encoding)
+        try:
+            return json.load(context.request.content.stream, encoding = context.request.content.encoding)
+        except JSONDecodeError:
+            # Failed to decode the content
+            self.logger.error('Failed to decode request content')
+            raise BadRequestContentError
