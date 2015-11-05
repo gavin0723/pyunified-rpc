@@ -16,7 +16,7 @@ import logging
 import traceback
 
 from werkzeug.routing import Map, Rule
-from werkzeug.exceptions import HTTPException
+from werkzeug.exceptions import HTTPException, NotFound
 from werkzeug.wrappers import Response as WKResponse
 from werkzeug.datastructures import Headers
 from werkzeug.http import HTTP_STATUS_CODES
@@ -209,7 +209,7 @@ class WebAdapter(Adapter):
             context.response.status = ERROR_BINDINGS[type(error)]
         elif isinstance(error, HTTPException):
             # A werkzeug http exception
-            context.response.werkzeug = error.get_response(context.request.environ)
+            context.response.werkzeug = error.get_response(context.request.raw.environ)
         else:
             # Treat as internal server error
             context.response.status = 500
