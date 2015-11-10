@@ -71,9 +71,5 @@ class WebRequest(Request):
             mimeTypes = list(sorted(map(lambda (v, q): AcceptValue(v, q), self.accept_mimetypes), key = lambda v: v.quality, reverse = True))
         if self.accept_charsets:
             charsets = list(sorted(map(lambda (v, q): AcceptValue(v, q), self.accept_charsets), key = lambda v: v.quality, reverse = True))
-        if self.accept_encodings:
-            charsets = list(sorted(map(lambda (v, q): AcceptValue(v, q), self.accept_encodings), key = lambda v: v.quality, reverse = True))
-        if self.accept_languages:
-            charsets = list(sorted(map(lambda (v, q): AcceptValue(v, q), self.accept_languages), key = lambda v: v.quality, reverse = True))
         # Done
         return AcceptContent(mimeTypes, charsets, encodings, languages)

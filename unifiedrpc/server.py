@@ -231,29 +231,26 @@ class Server(object):
         else:
             if context.request.accept and context.request.accept.mimeTypes:
                 # Select the first allowed accept mime types
-                if not allowedMimeTypes:
-                    # Use the first accept content type which the server supported
-                    for acceptValue in context.request.accept.mimeTypes:
-                        acceptMimeType = acceptValue.value.lower()
-                        if self.contentBuilder.isSupportMimeType(acceptMimeType):
-                            mimeType = acceptMimeType
-                    if not mimeType:
-                        raise NotAcceptableError
-                else:
-                    # Check the mimetypes
-                    for acceptValue in context.request.accept.mimeTypes:
-                        acceptMimeType = acceptValue.value.lower()
-                        if acceptMimeType in allowedMimeTypes:
-                            mimeType = acceptMimeType
-                            break
-                    if not mimeType:
-                        raise NotAcceptableError
+                for acceptValue in context.request.accept.mimeTypes:
+                    acceptMimeType = acceptValue.value.lower().strip()
+                    if acceptMimeType == '*/*':
+                        # Use the first accept content type the server supported
+                        if not allowedMimeTypes or self.DEFAULT_RESPONSE_MIMETYPE in allowedMimeTypes:
+                            mimeType = self.DEFAULT_RESPONSE_MIMETYPE
+                        else:
+                            mimeType = allowedMimeTypes[0]
+                        break
+                    elif self.contentBuilder.isSupportMimeType(acceptMimeType):
+                        mimeType = acceptMimeType
+                        break
+                if not mimeType:
+                    raise NotAcceptableError
             else:
                 # Select the first allowed mime types
-                if allowedMimeTypes:
-                    mimeType = allowedMimeTypes[0]
-                else:
+                if not allowedMimeTypes or self.DEFAULT_RESPONSE_MIMETYPE in allowedMimeTypes:
                     mimeType = self.DEFAULT_RESPONSE_MIMETYPE
+                else:
+                    mimeType = allowedMimeTypes[0]
         # Done
         return mimeType
 

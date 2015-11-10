@@ -15,7 +15,6 @@ class TextContentBuilder(ContentBuilder):
         'text/plain',
         mime.APPLICATION_XHTML_XML,
         mime.TEXT_HTML,
-        mime.TEXT_JAVASCRIPT,
         mime.TEXT_MARKDOWN,
     ]
 

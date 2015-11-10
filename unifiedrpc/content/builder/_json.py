@@ -14,7 +14,7 @@ class JsonContentBuilder(ContentBuilder):
     """The ContentBuilder
     """
     SUPPORT_MIMETYPES = [
-        mime.APPLICATION_JSON
+        mime.APPLICATION_JSON,
     ]
 
     def isSupportMimeType(self, mimeType):

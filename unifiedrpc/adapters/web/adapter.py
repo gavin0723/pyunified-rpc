@@ -20,7 +20,6 @@ from werkzeug.exceptions import HTTPException, NotFound
 from werkzeug.wrappers import Response as WKResponse
 from werkzeug.datastructures import Headers
 from werkzeug.http import HTTP_STATUS_CODES
-from werkzeug.utils import get_content_type
 
 from unifiedrpc.adapters import Adapter
 from unifiedrpc.protocol import Context, Request, Response, Dispatch
@@ -30,6 +29,7 @@ from unifiedrpc.definition import CONFIG_REQUEST_ENCODING
 
 from definition import ENDPOINT_CHILDREN_WEBENDPOINT_KEY
 from request import WebRequest
+from util import getContentType
 
 # Bind errors to http status code
 ERROR_BINDINGS = {
@@ -258,7 +258,7 @@ class WebAdapter(Adapter):
                 context.response.content,
                 status = context.response.status,
                 headers = context.response.headers.items(),
-                content_type = get_content_type(context.response.mimeType, context.response.encoding)
+                content_type = getContentType(context.response.mimeType, context.response.encoding)
                 )
         else:
             # NOTE: This is a little tricky to directly use the werkzeug response when error occurred

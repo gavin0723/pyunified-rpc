@@ -73,11 +73,14 @@ class Endpoint(object):
                                 # NOTE: DONOT modify this field
         # Set the children
         self.children = children or {}
-        self.pipeline = pipeline or ExecutionPipeline()
+        if not pipeline:
+            # Create the pipeline
+            # Add default execution node
+            from unifiedrpc.executionnode.parameter import ParameterTypeConversionNode
+            pipeline = ExecutionPipeline()
+            pipeline.add(ParameterTypeConversionNode(), 1000)
+        self.pipeline = pipeline
         self.configs = configs
-        # Add default execution node
-        from unifiedrpc.executionnode.parameter import ParameterTypeConversionNode
-        self.pipeline.add(ParameterTypeConversionNode(), 1000)
 
     def __getattr__(self, key):
         """Get the attribute, transparently access attribute of _endpoint
@@ -94,6 +97,9 @@ class Endpoint(object):
         # NOTE:
         #   Here, we donot copy the children, pipeline, configs and other attributes for performance concern
         endpoint = Endpoint(self.callableObject.__get__(instance, owner), self.document, self.children, self.pipeline, **self.configs)
+        # Copy the signature configs
+        endpoint.signature.parameter.defaults = self.signature.parameter.defaults
+        endpoint.signature.parameter.types = self.signature.parameter.types
         if instance:
             # Set the endpoint instance to the instance
             setattr(instance, endpoint.signature.name, endpoint)
