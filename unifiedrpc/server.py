@@ -29,9 +29,9 @@ class Server(object):
     """
     logger = logging.getLogger('unifiedrpc.server')
 
-    DEFAULT_REQUEST_ENCODING        = 'utf8'
+    DEFAULT_REQUEST_ENCODING        = 'utf-8'
     DEFAULT_RESPONSE_MIMETYPE       = 'text/plain'
-    DEFAULT_RESPONSE_ENCODING       = 'utf8'
+    DEFAULT_RESPONSE_ENCODING       = 'utf-8'
 
     EVENT_CLASS                     = threading.Event
 
