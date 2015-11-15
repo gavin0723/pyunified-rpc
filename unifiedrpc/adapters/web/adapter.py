@@ -214,29 +214,38 @@ class WebAdapter(Adapter):
             # Treat as internal server error
             context.response.status = 500
 
-    def setEndpoints(self, endpoints):
+    def setEndpoints(self, srvEndpoints):
         """Set the endpoints
         """
         totalWebEndpoints = {}      # A dict of endpoint
         urlRules = []               # A list of url routing rules
-        for endpoint in endpoints:
-            # Get the web endpoint
-            webEndpoints = endpoint.children.get(ENDPOINT_CHILDREN_WEBENDPOINT_KEY)
-            if webEndpoints:
-                for webEndpoint in webEndpoints.itervalues():
-                    # Good, lets add this endpoint
-                    if webEndpoint.id in totalWebEndpoints:
-                        raise ValueError('Web endpoint id [%s] duplicated' % webEndpoint.id)
-                    totalWebEndpoints[webEndpoint.id] = (webEndpoint, endpoint)
-                    # Get the methods
-                    if not webEndpoint.method:
-                        methods = None
-                    elif isinstance(webEndpoint.method, basestring):
-                        methods = (webEndpoint.method, )
-                    else:
-                        methods = webEndpoint.method
-                    # Add the rule
-                    urlRules.append(Rule(webEndpoint.path, endpoint = webEndpoint.id, methods = methods, host = webEndpoint.host, subdomain = webEndpoint.subdomain))
+        for service, endpoints in srvEndpoints:
+            # Bootup service
+            hasWebEndpoint = False
+            # Add all endpoints
+            for endpoint in endpoints:
+                # Get the web endpoint
+                webEndpoints = endpoint.children.get(ENDPOINT_CHILDREN_WEBENDPOINT_KEY)
+                if webEndpoints:
+                    # Has web endpoint
+                    hasWebEndpoint = True
+                    for webEndpoint in webEndpoints.itervalues():
+                        # Good, lets add this endpoint
+                        if webEndpoint.id in totalWebEndpoints:
+                            raise ValueError('Web endpoint id [%s] duplicated' % webEndpoint.id)
+                        totalWebEndpoints[webEndpoint.id] = (webEndpoint, endpoint)
+                        # Get the methods
+                        if not webEndpoint.method:
+                            methods = None
+                        elif isinstance(webEndpoint.method, basestring):
+                            methods = (webEndpoint.method, )
+                        else:
+                            methods = webEndpoint.method
+                        # Add the rule
+                        urlRules.append(Rule(webEndpoint.path, endpoint = webEndpoint.id, methods = methods, host = webEndpoint.host, subdomain = webEndpoint.subdomain))
+            # Boot up service
+            if hasWebEndpoint:
+                service.bootup(self)
         # Done
         self.endpoints = totalWebEndpoints
         self.urlMapper = Map(urlRules)
@@ -273,11 +282,11 @@ class WebAdapter(Adapter):
             context.responded = True
             return response(context.request.raw.environ, context.request.raw.startResponse)
 
-    def startAsync(self, onRequestCallback, onErrorCallback, endpoints):
+    def startAsync(self, onRequestCallback, onErrorCallback, srvEndpoints):
         """Start asynchronously
         """
         # Set endpoints
-        self.setEndpoints(endpoints)
+        self.setEndpoints(srvEndpoints)
         # Set callback
         self.onRequestCallback = onRequestCallback
         self.onErrorCallback = onErrorCallback

@@ -15,7 +15,7 @@ class Adapter(object):
         self.name = name
         self.configs = configs
 
-    def startAsync(self, onRequestCallback, onErrorCallback, endpoints):
+    def startAsync(self, onRequestCallback, onErrorCallback, srvEndpoints):
         """Start asynchronously
         Parameters:
             onRequestCallback           The callback which should be called when received a new request, the method has two parameters:
@@ -31,7 +31,7 @@ class Adapter(object):
                                         - message           The message of this error, optional
                                         NOTE:
                                             This callback will NEVER raise any exception
-            endpoints                   A list of all endpoints
+            srvEndpoints                A list of all srvEndpoints - a tuple (service, endpoints)
         Returns:
             Nothing
         """

@@ -37,12 +37,11 @@ class Server(object):
 
     CONTENT_CONTAINER_CLASS         = PlainContentContainer
 
-    def __init__(self, adapters = None, services = None, endpointDiscover = None, contentParser = None, contentBuilder = None, **configs):
+    def __init__(self, adapters = None, services = None, contentParser = None, contentBuilder = None, **configs):
         """Create a new Server
         """
         self.adapters = {}
         self.services = {}
-        self.endpoints = None   # A dict which key is endpoint id value is Endpoint object
         # Add adapters
         if adapters:
             for adapter in adapters:
@@ -51,8 +50,6 @@ class Server(object):
         if services:
             for service in services:
                 self.addService(service)
-        # Set the discover
-        self.endpointDiscover = endpointDiscover or ServiceEndpointDiscover()
         # Set the content parser and builder
         self.contentParser = contentParser or AggregateContentParser.default()
         self.contentBuilder = contentBuilder or AutomaticContentBuilder.default()
@@ -400,18 +397,14 @@ class Server(object):
         """Start the server asynchronously
         """
         # Discover endpoints
-        endpoints = {}
+        srvEndpoints = []       # A list of tuple(service, endpoints)
         for service in self.services.itervalues():
-            srvEndpoints = self.endpointDiscover.discover(service)
-            if srvEndpoints:
-                for endpoint in srvEndpoints:
-                    if endpoint.id in endpoints:
-                        raise ValueError('Conflict endpoint id [%s]' % endpoint.id)
-                    endpoints[endpoint.id] = endpoint
-        self.endpoints = endpoints
+            endpoints = service.getEndpoints()
+            if endpoints:
+                srvEndpoints.append((service, endpoints))
         # Run it
         for adapter in self.adapters.itervalues():
-            adapter.startAsync(self.onRequest, self.onError, self.endpoints.values())
+            adapter.startAsync(self.onRequest, self.onError, srvEndpoints)
 
     def start(self):
         """Start the server
