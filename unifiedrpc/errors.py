@@ -43,8 +43,8 @@ class BadRequestParameterError(BadRequestError):
         """
         return '%s: #%s - [%s] - [%s] - [%s]' % (type(self).__name__, self.code or '', self.parameter, self.reason or '', self.detail or '')
 
-class BadRequestContentError(BadRequestError):
-    """The bad request content error
+class BadRequestBodyError(BadRequestError):
+    """The bad request body error
     """
 
 class UnauthorizedError(RPCError):
@@ -101,3 +101,9 @@ ERRCODE_UNDEFINED                                           = 0x0               
 ERRCODE_BADREQUEST_INVALID_PARAMETER_TYPE                   = 0x0001001             # The parameter is invalid (cannot convert to the declared data type)
 ERRCODE_BADREQUEST_UNKNOWN_PARAMETER                        = 0x0001002             # The parameter is unknown
 ERRCODE_BADREQUEST_LACK_OF_PARAMETER                        = 0x0001003             # Lack of the necessary parameter
+ERRCODE_BADREQUEST_LACK_OF_BODY                             = 0x0001010             # Lack of the request body
+ERRCODE_BADREQUEST_INVALID_BODY                             = 0x0001011             # The request body is invalid
+ERRCODE_BADREQUEST_BODY_NOT_SATISFIED                       = 0x0001012             # The request body is not satified with the specification
+
+ERRCODE_UNAUTHORIZED_INVALID_CREDENTIAL                     = 0x0002001             # The provided credential is invalid
+ERRCODE_UNAUTHORIZED_BLOCKED                                = 0x0002002             # The authentication or authorization is blocked by someone

@@ -354,6 +354,12 @@ class Server(object):
             raise ValueError('Service name [%s] duplicated' % service.name)
         self.services[service.name] = service
 
+    def addServices(self, services):
+        """Add services
+        """
+        for service in services:
+            self.addService(service)
+
     def removeService(self, name):
         """Remove a service
         NOTE:

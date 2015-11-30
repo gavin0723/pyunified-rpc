@@ -35,7 +35,7 @@ from util import getContentType
 ERROR_BINDINGS = {
     BadRequestError:                400,
     BadRequestParameterError:       400,
-    BadRequestContentError:         400,
+    BadRequestBodyError:            400,
     UnauthorizedError:              401,
     ForbiddenError:                 403,
     NotFoundError:                  404,

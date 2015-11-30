@@ -10,8 +10,10 @@
 """
 
 from params import paramtype
+from content import requiredata
 
 __all__ = [
-        'paramtype'
+        'paramtype',
+        'requiredata'
         ]
 

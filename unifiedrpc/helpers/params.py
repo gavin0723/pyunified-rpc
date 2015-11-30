@@ -20,7 +20,6 @@ def paramtype(**params):
             endpoint.signature.parameter.types[name] = type
         # Done
         return endpoint
-
+    # Done
     return decorate
-
 
