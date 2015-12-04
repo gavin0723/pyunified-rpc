@@ -34,6 +34,7 @@ class WebEndpoint(object):
             subdomain = None,
             cookieSecret = None,
             allowedMultiParams = None,
+            **configs
             ):
         """Create a new WebEndpoint
         """
@@ -45,6 +46,7 @@ class WebEndpoint(object):
         self.subdomain = subdomain
         self.cookieSecret = cookieSecret
         self.allowedMultiParams = allowedMultiParams
+        self.configs = configs
 
     def __call__(self, endpoint):
         """Attach to endpoint object

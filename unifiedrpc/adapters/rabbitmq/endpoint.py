@@ -12,7 +12,6 @@
 from uuid import uuid4
 
 from definition import ENDPOINT_CHILDREN_RABBITMQ_SUBCRIBE_ENDPOINT_KEY
-from execnode import SetDataAsParameterNode
 
 class SubscribeEndpoint(object):
     """The subscribe endpoint
@@ -40,13 +39,6 @@ class SubscribeEndpoint(object):
             endpoint.children[ENDPOINT_CHILDREN_RABBITMQ_SUBCRIBE_ENDPOINT_KEY][self.id] = self
         else:
             endpoint.children[ENDPOINT_CHILDREN_RABBITMQ_SUBCRIBE_ENDPOINT_KEY] = { self.id: self }
-        # Add execution node
-        shouldAddSetDataAsParamNode = True
-        for node in endpoint.pipeline.nodes:
-            if isinstance(node, SetDataAsParameterNode):
-                shouldAddSetDataAsParamNode = False
-        if shouldAddSetDataAsParamNode:
-            endpoint.pipeline.add(SetDataAsParameterNode(), 10000)
         # Done
         return endpoint
 
@@ -74,13 +66,6 @@ class AnonymousSubscribeEndpoint(object):
             endpoint.children[ENDPOINT_CHILDREN_RABBITMQ_SUBCRIBE_ENDPOINT_KEY][self.id] = self
         else:
             endpoint.children[ENDPOINT_CHILDREN_RABBITMQ_SUBCRIBE_ENDPOINT_KEY] = { self.id: self }
-        # Add execution node
-        shouldAddSetDataAsParamNode = True
-        for node in endpoint.pipeline.nodes:
-            if isinstance(node, SetDataAsParameterNode):
-                shouldAddSetDataAsParamNode = False
-        if shouldAddSetDataAsParamNode:
-            endpoint.pipeline.add(SetDataAsParameterNode(), 10000)
         # Done
         return endpoint
 

@@ -14,6 +14,7 @@ from request import Request
 from response import Response
 from dispatcher import Dispatcher
 from context import Context
+from session import Session, DictSession, SessionManager
 
 _context = local()
 context = LocalProxy(lambda: _context.context if hasattr(_context, 'context') else None)
@@ -26,4 +27,4 @@ def contextspace(server, adapter):
     yield
     _context.context = None
 
-__all__ = [ 'Endpoint', 'Request', 'Response', 'Dispatcher', 'Context', 'context', 'contextspace' ]
+__all__ = [ 'Endpoint', 'Request', 'Response', 'Dispatcher', 'Context', 'context', 'contextspace', 'Session', 'DictSession', 'SessionManager' ]

@@ -11,9 +11,11 @@
 
 from params import paramtype
 from content import requiredata
+from session import requiresession
 
 __all__ = [
         'paramtype',
-        'requiredata'
+        'requiredata',
+        'requiresession',
         ]
 

@@ -30,7 +30,8 @@ from unifiedrpc.protocol.request import RequestContent
 from unifiedrpc.errors import *
 from unifiedrpc.definition import CONFIG_REQUEST_ENCODING
 
-from definition import ENDPOINT_CHILDREN_WEBENDPOINT_KEY
+from definition import ENDPOINT_CHILDREN_WEBENDPOINT_KEY, \
+        CONFIG_SESSION_MANAGER
 from request import WebRequest
 from response import WebResponse
 from util import getContentType
@@ -86,11 +87,13 @@ class WebAdapter(Adapter):
             raise TypeError('Invalid parameter host, require string type actually got [%s]' % type(host).__name__)
         if not isinstance(port, int):
             raise TypeError('Invalid parameter port, require int type actually got [%s]' % type(port).__name__)
-        # Set
+        # Set basic attributes
         self.host = host
         self.port = port
         self.endpoints = {}         # A dict, key is web endpoint id, value is (WebEndpoint, Endpoint) object
         self.urlMapper = None       # A werkzeug.routing.Map object
+        # Session
+        self.sessionManager = configs.get(CONFIG_SESSION_MANAGER)
         # Super
         super(WebAdapter, self).__init__(name, **configs)
 
@@ -120,6 +123,9 @@ class WebAdapter(Adapter):
                         context.request.content.encoding = encoding
                     # Parse the content data
                     context.request.content.data = context.components.contentParser.parse(context)
+                # Get session
+                if self.sessionManager:
+                    context.session = self.sessionManager.get(context.request)
                 # Dispatch
                 stage = STAGE_BEFORE_DISPATCH
                 context.dispatcher = self.dispatch()
@@ -131,8 +137,15 @@ class WebAdapter(Adapter):
                 # Invoke the endpoint
                 stage = STAGE_BEFORE_HANDLER
                 value = context.dispatcher.endpoint.pipeline(context)
+                # Set session
+                if self.sessionManager:
+                    if context.shouldCleanSession:
+                        self.sessionManager.clean(context.response)
+                    else:
+                        self.sessionManager.set(context.session, context.response)
                 # Check the value, if it is a response object, then just return
                 if isinstance(value, WKResponse):
+                    # Skip all following steps
                     return value(environ, startResponse)
                 # Set the value to container
                 stage = STAGE_BEFORE_SETVALUE

@@ -82,3 +82,16 @@ class WebResponse(Response):
         """
         self.content_type = getContentType(mimeType or self._mimeType, encoding or self._encoding)
 
+def redirect(location, statusCode = 302, content = None):
+    """Create a new Redirect
+    """
+    from unifiedrpc import context
+    context.response.status_code = statusCode
+    context.response.headers['Location'] = location
+    context.response.content = content or ''
+    # Return the response object
+    return context.response
+
+# Well, make it looks like a class not a method
+Redirect = redirect
+

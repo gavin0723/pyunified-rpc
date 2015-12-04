@@ -13,3 +13,10 @@ HTTP_METHOD_OPTIONS     = 'OPTIONS'
 
 ENDPOINT_CHILDREN_WEBENDPOINT_KEY       = 'web.endpoint'
 
+# Adapter config
+CONFIG_SESSION_MANAGER                  = 'sessionManager'
+
+# Web endpoint config
+WEB_EP_CONFIG_RESPONSE_CONTAINER        = 'responseContainer'
+WEB_EP_CONFIG_RESPONSE_MIMETYPE         = 'responseMimeType'
+WEB_EP_CONFIG_RESPONSE_ENCODING         = 'responseMimeEncoding'
