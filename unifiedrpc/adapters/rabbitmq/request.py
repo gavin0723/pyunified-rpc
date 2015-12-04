@@ -11,9 +11,9 @@
 
 from cStringIO import StringIO
 
-from unifiedrpc.protocol.request import RequestContent
+from unifiedrpc.protocol.request import Request, RequestContent
 
-class RabbitMQRequest(object):
+class RabbitMQRequest(Request):
     """The rabbitmq request
     """
     def __init__(self, consumer, message):
@@ -21,16 +21,33 @@ class RabbitMQRequest(object):
         """
         self.consumer = consumer
         self.message = message
-        # Get headers
         self.properties = message.properties
-        self.headers = self.properties.get('application_headers')
-        # Get request
-        self.content = RequestContent(
+        # Get headers
+        headers = self.properties.get('application_headers')
+        # Get Content
+        content = self.parseContent(headers)
+        # Get parameters
+        params = self.parseParameters(headers, content)
+        # Get accept
+        accept = self.parseAccept(headers, content)
+        # Super
+        super(RabbitMQRequest, self).__init__(headers, params, content, accept)
+
+    def parseContent(self, headers):
+        """Parse content
+        """
+        return RequestContent(
             self.properties.get('content_type'),
             self.properties.get('content_encoding'),
-            stream = StringIO(message.body)
+            stream = StringIO(self.message.body)
             )
 
-class RabbitMQSubscriptionRequest(RabbitMQRequest):
-    """The rabbitmq subscription request
-    """
+    def parseParameters(self, headers, content):
+        """Parse parameters
+        """
+        pass
+
+    def parseAccept(self, headers, content):
+        """Parse accept
+        """
+        pass

@@ -58,102 +58,19 @@ class Server(object):
         # Set the closed event
         self.closedEvent = self.EVENT_CLASS()
 
-    def onRequest(self, incoming, adapter):
-        """On a request incoming
-        Parameters:
-            incoming                            The incoming request, any kind of object
-            adapter                             The adapter to handle this request
-        Returns:
-            The context object
+    def initContext(self, context):
+        """Initialize the context
         """
-        # Clean and create new context
-        Context.cleanCurrent()
-        context = Context(server = self, adapter = adapter)
-        # Start processing
-        try:
-            try:
-                # Prepare the context
-                self.prepareContext(context, incoming)
-            except:
-                # Here, we're trying to safe init the response in order to let the whole framework correctly generate the error response
-                self.safeInitResponse(context)
-                # Re-raise the exception
-                raise
-            # Set the context
-            Context.setCurrent(context)
-            # Parse the request content stream if have one
-            if context.request.content and context.request.content.mimeType:
-                context.request.content.data = self.contentParser.parse(context)
-            # Invoke the endpoint
-            value = self.executeEndpoint(context)
-            context.response.container.setValue(value)
-        except Exception as error:
-            # The very common error handling
-            self.onRequestError(error, traceback.format_exc(), incoming, adapter, context)
-        finally:
-            self.contentBuilder.build(context)
-            # Return the context
-            return context
+        context.components.contentParser = self.contentParser
+        context.components.contentBuilder = self.contentBuilder
 
-    def onError(self, error, adapter, tbString = None, message = None):
-        """On error callback
-        Parameters:
-            error                               The error object
-            adapter                             The adapter
-            tbString                            The traceback message
-            message                             The additional message
-                                                NOTE:
-                                                    This parameter may not be a string but a dict or other data type
-        Returns:
-            Nothing
-        NOTE:
-            This method MUST NEVER raise any exception
-        """
-        # Log it
-        self.logger.error('Error occurred with adapter [%s@%s@%s]: %s\n%s\nMessage:%s',
-            adapter.name,
-            adapter.type,
-            type(adapter).__name__,
-            error,
-            tbString or '',
-            message or ''
-            )
-
-    def prepareContext(self, context, incoming):
-        """Prepare the context
-        Parameters:
-            incoming                            The incoming request, any kind of object
-        Returns:
-            Context object
-        """
-        # Parse the request
-        self.parseRequest(incoming, context)
-        # Dispatch
-        self.dispatch(context)
-        # Initialize the response
-        self.initResponse(incoming, context)
-
-    def parseRequest(self, incoming, context):
-        """Parse the request
-        Parameters:
-            incoming                            The incoming request, any kind of object
-            context                             The Context object
-        Returns:
-            Nothing
-        """
-        # Call the adapter to parse the request
-        return context.adapter.parseRequest(incoming, context)
-
-    def initResponse(self, incoming, context):
+    def initResponse(self, context):
         """Initialize the response
         Parameters:
-            adapter                             The adapter to handle this request
             context                             The Context object
         Returns:
             Nothing
         """
-        # Call the adapter to initialize the response
-        context.adapter.initResponse(incoming, context)
         # Get the response mime type
         if not context.response.mimeType:
             context.response.mimeType = self.getResponseMimeType(context)
@@ -164,46 +81,13 @@ class Server(object):
         if not context.response.container:
             context.response.container = self.getResponseContainer(context)
 
-    def safeInitResponse(self, context):
-        """Safely initialize the response
-        Parameters:
-            context                             The Context object
-        Returns:
-            Nothing
-        NOTE:
-            This method will NEVER raise any exception and the initialization should be successful all the time
-        """
-        try:
-            mimeType = self.getResponseMimeType(context)
-        except:
-            mimeType = self.DEFAULT_RESPONSE_MIMETYPE
-        try:
-            encoding = self.getResponseEncoding(context)
-        except:
-            encoding = self.DEFAULT_RESPONSE_ENCODING
-        try:
-            container = self.getResponseContainer(context)
-        except:
-            container = self.CONTENT_CONTAINER_CLASS()
-        # Set them
-        if not context.response:
-            # Create the whole response
-            context.response = Response(mimeType = mimeType, encoding = encoding, container = container)
-        else:
-            if not context.response.mimeType:
-                context.response.mimeType = mimeType
-            if not context.response.encoding:
-                context.response.encoding = encoding
-            if not context.response.container:
-                context.response.container = container
-
     def getResponseMimeType(self, context):
         """Get the response mimeType
         """
         # Get the raw mime type(s)
         rawMimeType = None
-        if context.dispatch and context.dispatch.endpoint:
-            rawMimeType = context.dispatch.endpoint.configs.get(CONFIG_RESPONSE_MIMETYPE)
+        if context.dispatcher and context.dispatcher.endpoint:
+            rawMimeType = context.dispatcher.endpoint.configs.get(CONFIG_RESPONSE_MIMETYPE)
         if not rawMimeType:
             rawMimeType = context.adapter.configs.get(CONFIG_RESPONSE_MIMETYPE)
             if not rawMimeType:
@@ -264,8 +148,8 @@ class Server(object):
             encoding = context.request.accept.charsets[0].value.lower()
         else:
             encoding = None
-            if context.dispatch and context.dispatch.endpoint:
-                encoding = context.dispatch.endpoint.configs.get(CONFIG_RESPONSE_ENCODING)
+            if context.dispatcher and context.dispatcher.endpoint:
+                encoding = context.dispatcher.endpoint.configs.get(CONFIG_RESPONSE_ENCODING)
             if not encoding:
                 encoding = context.adapter.configs.get(CONFIG_RESPONSE_ENCODING)
                 if not encoding:
@@ -277,8 +161,8 @@ class Server(object):
         """Get the response container
         """
         containerClass = None
-        if context.dispatch and context.dispatch.endpoint:
-            containerClass = context.dispatch.endpoint.configs.get(CONFIG_RESPONSE_CONTENT_CONTAINER)
+        if context.dispatcher and context.dispatcher.endpoint:
+            containerClass = context.dispatcher.endpoint.configs.get(CONFIG_RESPONSE_CONTENT_CONTAINER)
         if not containerClass:
             containerClass = context.adapter.configs.get(CONFIG_RESPONSE_CONTENT_CONTAINER)
             if not containerClass:
@@ -288,63 +172,6 @@ class Server(object):
         # Done
         return containerClass()
 
-    def dispatch(self, context):
-        """Dispatch the request
-        Parameters:
-            adapter                             The adapter to handle this request
-            context                             The Context object
-        Returns:
-            Nothing
-        """
-        # Call the adapter to dispatch the request
-        return context.adapter.dispatch(context)
-
-    def executeEndpoint(self, context):
-        """Execute the endpoint
-        Parameters:
-            context                             The Context object
-        Returns:
-            The returned value
-        """
-        return context.dispatch.endpoint.pipeline(context)
-
-    def onRequestError(self, error, tbString, incoming, adapter, context):
-        """On a process error
-        This method should handle the error (Such as print log, send error event, generate error response) and
-        set context object properly
-        Parameters:
-            error                               The exception object
-            tbString                            The traceback message
-            incoming                            The incoming object
-            adapter                             The adapter object
-            context                             The Context object
-        Returns:
-            Nothing
-        NOTE:
-            This method MUST NOT raise any exceptions
-        """
-        try:
-            # Set the error meta data
-            if isinstance(error, RPCError):
-                if not error.code is None or error.reason or error.detail:
-                    context.response.container.setError(error.code, error.reason, error.detail)
-                # Check if it is a internal server error, thus should call on error
-                if isinstance(error, InternalServerError):
-                    self.onError(error, adapter, tbString)
-            else:
-                # An unexpected error, set as internal server error and call on error
-                context.response.container.setError(ERRCODE_UNDEFINED, 'Internal Server Error')
-                self.onError(error, adapter, tbString)
-            # Handle the error
-            return adapter.handleError(error, tbString, incoming, context)
-        except Exception as innerError:
-            # Report the error
-            self.onError(innerError, adapter, traceback.format_exc(), message = {
-                'reason': 'Failed',
-                'error': error,
-                'traceback': tbString,
-                })
-
     def addService(self, service):
         """Add a service
         NOTE:
@@ -352,7 +179,11 @@ class Server(object):
         """
         if service.name in self.services:
             raise ValueError('Service name [%s] duplicated' % service.name)
+        # Add service
         self.services[service.name] = service
+        # Add service to adapters
+        for adapter in self.adapters.itervalues():
+            adapter.addService(service)
 
     def addServices(self, services):
         """Add services
@@ -366,14 +197,23 @@ class Server(object):
             Remove service after started the service will not take effect
         """
         if name in self.services:
-            del self.services[name]
+            # Remove service
+            service = self.services.pop(name)
+            # Remove service from adapters
+            for adapter in self.adapters.itervalues():
+                adapter.removeService(service)
 
     def cleanServices(self):
         """Clean the services
         NOTE:
             Clean service after started the service will not take effect
         """
+        # Remove services
+        services = self.services
         self.services = {}
+        # Remove services from adapters
+        for adapter in self.adapters.itervalues():
+            adapter.cleanServices(services)
 
     def addAdapter(self, adapter):
         """Add a adapter
@@ -382,7 +222,12 @@ class Server(object):
         """
         if adapter.name in self.adapters:
             raise ValueError('Adapter name [%s] duplicated' % adapter.name)
+        # Add adapter
+        adapter.server = self
         self.adapters[adapter.name] = adapter
+        # Add services
+        for service in self.services.itervalues():
+            adapter.addService(service)
 
     def removeAdapter(self, name):
         """Remove a adapter
@@ -390,27 +235,30 @@ class Server(object):
             Remove adapters after started the service will not take effect
         """
         if name in self.adapters:
-            del self.adapters[name]
+            # Remove adapter from adapters
+            adapter = self.adapters.pop(name)
+            # Shutdown adapter
+            adapter.server = None
+            if adapter.started:
+                adapter.close()
+            # Clean services
+            adapter.cleanServices(self.services.values())
 
     def cleanAdapters(self):
         """Clean the adapters
         NOTE:
             Clean adapters after started the service will not take effect
         """
-        self.adapters = {}
+        for name in self.adapters.keys():
+            # Remove it
+            self.removeAdapter(name)
 
     def startAsync(self):
         """Start the server asynchronously
         """
-        # Discover endpoints
-        srvEndpoints = []       # A list of tuple(service, endpoints)
-        for service in self.services.itervalues():
-            endpoints = service.getEndpoints()
-            if endpoints:
-                srvEndpoints.append((service, endpoints))
-        # Run it
+        # Start all adapters
         for adapter in self.adapters.itervalues():
-            adapter.startAsync(self.onRequest, self.onError, srvEndpoints)
+            adapter.startAsync()
 
     def start(self):
         """Start the server

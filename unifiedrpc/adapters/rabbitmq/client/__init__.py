@@ -25,7 +25,19 @@ class RabbitMQClient(object):
     """
     logger = logging.getLogger('unifiedrpc.adapter.rabbitmq.client')
 
-    def __init__(self, host, port, transport = None, user = None, password = None, vhost = '/', connectTimeout = None, heartbeat = None, onConnected = None, onDisconnected = None, onClosed = None):
+    def __init__(self,
+        host,
+        port,
+        transport = None,
+        user = None,
+        password = None,
+        vhost = '/',
+        connectTimeout = None,
+        heartbeat = None,
+        onConnected = None,
+        onDisconnected = None,
+        onClosed = None
+        ):
         """Create a new RabbitMQClient
         NOTE:
             The difference between onDisconnected and onClosed:
@@ -46,6 +58,12 @@ class RabbitMQClient(object):
         # Create the connection
         self.connection = self.getConnection()
         self.pubChannel = None
+
+    @property
+    def isConnected(self):
+        """Tell if is connected
+        """
+        return self.connection._connected
 
     def dispatch(self, method, *args, **kwargs):
         """Dispatch a new method

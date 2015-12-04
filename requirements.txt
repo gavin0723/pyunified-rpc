@@ -1,3 +1,4 @@
 Werkzeug
 pymime
-gevent==1.1b6
+haigha
+gevent==1.1rc1

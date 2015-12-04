@@ -36,17 +36,21 @@
 import logging
 import traceback
 
+from uuid import uuid4
+from functools import partial
+
 from haigha.message import Message
 
 from unifiedrpc.adapters import Adapter
-from unifiedrpc.protocol import Context, Request, Response, Dispatch
+from unifiedrpc.protocol import Dispatcher, context, contextspace
 from unifiedrpc.protocol.request import RequestContent
 from unifiedrpc.errors import *
 from unifiedrpc.definition import CONFIG_REQUEST_ENCODING
 
 from .client import GeventRabbitMQClient
 from .endpoint import SubscribeEndpoint, AnonymousSubscribeEndpoint
-from .request import RabbitMQSubscriptionRequest
+from .request import RabbitMQRequest
+from .response import RabbitMQResponse
 from .definition import ENDPOINT_CHILDREN_RABBITMQ_SUBCRIBE_ENDPOINT_KEY, DEFAULT_PUBLISH_CONTENT_TYPE_KEY, DEFAULT_PUBLISH_CONTENT_ENCODING_KEY
 from .errors import NotStartedError
 
@@ -60,89 +64,100 @@ class RabbitMQAdapter(Adapter):
         """Create a new RabbitMQAdapter
         """
         self.client = None
-        self.onRequestCallback = None
-        self.srvEndpoints = None
-        self.consumers = None
+        self.services = {}      # A dict which key is service name value is MQService object
         # Super
         super(RabbitMQAdapter, self).__init__(name, **configs)
 
-    def onMessageReceived(self, consumer, message):
-        """On message received
+    @property
+    def started(self):
+        """Tell if this adapter is started or not
         """
-        if not self.onRequestCallback:
-            raise ValueError('Require request callback')
-        # Invoke request callback
-        return self.onRequestCallback((consumer, message), self)
+        return self.client and self.client.isConnected
 
-    def parseRequest(self, incoming, context):
-        """Parse the request, set the context
+    def getSubscribeEndpointFromService(self, service):
+        """Get the subscribe endpoint from service
         """
-        consumer, message = incoming
-        # Get raw request
-        rawRequest = consumer.parseRequest(message)
-        # Generate the request
-        # TODO: Resolve headers etc.. from raw request
-        request = Request(headers = rawRequest.headers, content = rawRequest.content, raw = rawRequest)
-        # Set context
-        context.request = request
+        endpoints = service.getEndpoints()
+        if endpoints:
+            for endpoint in endpoints:
+                subEndpoints = endpoint.children.get(ENDPOINT_CHILDREN_RABBITMQ_SUBCRIBE_ENDPOINT_KEY)
+                if subEndpoints:
+                    for subEndpoint in subEndpoints.itervalues():
+                        yield subEndpoint, endpoint
 
-    def initResponse(self, incoming, context):
-        """Initialize the response
+    def addService(self, service):
+        """Add a service
         """
-        consumer, message = incoming
-        # Done
-        return consumer.initResponse(message, context)
+        hasEndpoint = False
+        # Get subscription endpoints
+        subscriptionConsumers = {}
+        for subEndpoint, endpoint in self.getSubscribeEndpointFromService(service):
+            hasEndpoint = True
+            # Create consumer
+            if isinstance(subEndpoint, SubscribeEndpoint):
+                consumer = RabbitMQSubscriptionConsumer(self, endpoint, subEndpoint)
+            elif isinstance(subEndpoint, AnonymousSubscribeEndpoint):
+                consumer = RabbitMQAnnonymousSubscriptionConsumer(self, endpoint, subEndpoint)
+            else:
+                raise ValueError('Unknown endpoint type [%s]' % type(subEndpoint).__name__)
+            subscriptionConsumers[subEndpoint.id] = consumer
+        # Add this service
+        if hasEndpoint:
+            mqService = MQService(service, subscriptionConsumers)
+            self.services[service.name] = mqService
+            # Check if connected
+            if self.started:
+                self.bootupService(mqService)
 
-    def dispatch(self, context):
-        """Dispatch the request
+    def removeService(self, service):
+        """Remove a service
         """
-        consumer, message = context.request.raw.consumer, context.request.raw.message
-        # Create the dispatch object
-        params = consumer.resolveParameters(message, context)
-        context.dispatch = Dispatch(consumer.endpoint, params, consumer = consumer)
+        if service.name in self.services:
+            mqService = self.services.pop(service.name)
+            # Shutdown this service
+            self.shutdownService(mqService)
 
-    def handleError(self, error, traceback, incoming, context):
-        """Handle the request error
-        Parameters:
-            error                       The error object
-            traceback                   The traceback string
-            incoming                    The incoming parameters
-            context                     The context
-        Returns:
-            Nothing
+    def cleanServices(self, services):
+        """Clean all service
         """
-        self.logger.error('An error occurred\nError: %s\ntraceback: %s\n', error, traceback)
+        for service in services:
+            self.removeService(service)
 
     def onRabbitMQConnected(self):
         """On rabbitmq connected
         """
-        consumers = []
-        # Initialize all rabbitmq service
-        for service, endpoints in self.srvEndpoints:
-            # Check out the endpoints
-            channel = None
-            for endpoint in endpoints:
-                # Get the subscription endpoints
-                subEndpoints = endpoint.children.get(ENDPOINT_CHILDREN_RABBITMQ_SUBCRIBE_ENDPOINT_KEY)
-                if subEndpoints:
-                    # Good, found subscription endpoint, check out the channel
-                    if not channel:
-                        channel = service.bootup(self)
-                        if not channel:
-                            # Channel not found
-                            self.logger.warn('Channel not created by service [%s] when booting up, will create a new one', service)
-                            channel = self.client.connection.channel()
-                    # Create consumers
-                    for endpointID, subEndpoint in subEndpoints.iteritems():
-                        if isinstance(subEndpoint, SubscribeEndpoint):
-                            consumer = RabbitMQSubscriptionConsumer(self, channel, endpoint, subEndpoint)
-                        elif isinstance(subEndpoint, AnonymousSubscribeEndpoint):
-                            consumer = RabbitMQAnnonymousSubscriptionConsumer(self, channel, endpoint, subEndpoint)
-                        else:
-                            raise ValueError('Unknown endpoint type [%s]' % type(subEndpoint).__name__)
-                        consumers.append(consumer)
-        # Done
-        self.consumers = consumers
+        # Bootup all service
+        for mqService in self.services.itervalues():
+            self.bootupService(mqService)
+
+    def onRabbitMQDisconnected(self):
+        """On rabbitmq disconnected
+        """
+        # Shutdown all service
+        for mqService in self.services.itervalues():
+            self.shutdownService(mqService)
+
+    def bootupService(self, mqService):
+        """Boot up the mq service
+        """
+        channel = mqService.service.bootup(self)
+        if not channel:
+            # Channel not found, create a new one
+            self.logger.warn('Channel not created by service [%s] when booting up, will create a new one', mqService.service.name)
+            channel = self.client.connection.channel()
+        # Start subscription consumers
+        if mqService.subscriptionConsumers:
+            for consumer in mqService.subscriptionConsumers.itervalues():
+                consumer.startAsyncConsuming(channel)
+
+    def shutdownService(self, mqService):
+        """Shutdown the mq service
+        """
+        # Close subscription consumers
+        if mqService.subscriptionConsumers:
+            for consumer in mqService.subscriptionConsumers.itervalues():
+                consumer.stopConsuming()
+        # Close rpc consumers
 
     def publish(self, routingKey, exchange, body, durable = False, contentType = None, encoding = None):
         """Publish messages
@@ -170,12 +185,9 @@ class RabbitMQAdapter(Adapter):
         if tag:
             channel.basic.ack(tag)
 
-    def startAsync(self, onRequestCallback, onErrorCallback, srvEndpoints):
+    def startAsync(self):
         """Start asynchronously
         """
-        # Set
-        self.onRequestCallback = onRequestCallback
-        self.srvEndpoints = srvEndpoints
         # Create client
         self.client = self.getRabbitMQClient()
 
@@ -188,9 +200,7 @@ class RabbitMQAdapter(Adapter):
         """Close current adapter
         """
         self.client.close()
-        self.srvEndpoints = None
         self.client = None
-        self.consumers = None
 
 class GeventRabbitMQAdapter(RabbitMQAdapter):
     """The gevent rabbitmq adapter
@@ -209,7 +219,7 @@ class GeventRabbitMQAdapter(RabbitMQAdapter):
             raise ValueError('Require rabbitmq host')
         if not port:
             raise ValueError('Require rabbitmq port')
-        params = { 'host': host, 'port': port, 'onConnected': self.onRabbitMQConnected }
+        params = { 'host': host, 'port': port, 'onConnected': self.onRabbitMQConnected, 'onDisconnected': self.onRabbitMQDisconnected }
         if user:
             params['user'] = user
         if password:
@@ -219,98 +229,134 @@ class GeventRabbitMQAdapter(RabbitMQAdapter):
         # Create the gevent rabbitmq client
         return GeventRabbitMQClient(**params)
 
+class MQService(object):
+    """The mq service
+    Attributes:
+        service                                 The service object
+        subscriptionConsumers                   A dict which key is subscription endpoint id, value is consumer object
+    """
+    def __init__(self, service, subscriptionConsumers):
+        """Create a new MQService
+        """
+        self.service = service
+        self.subscriptionConsumers = subscriptionConsumers
+
 class RabbitMQConsumer(object):
     """The rabbit consumer
     """
     logger = logging.getLogger('unifiedrpc.adapter.rabbitmq.consumer')
 
-    def __init__(self, adapter, channel, endpoint):
+    def __init__(self, adapter, endpoint):
         """Create a new RabbitMQConsumer
         """
         self.adapter = adapter
-        self.channel = channel
         self.endpoint = endpoint
+        self.channel = None
 
-    def parseRequest(self, message):
-        """Get the request object
+    def getDefaultRequestContentEncoding(self):
+        """Get the default request content encoding
         """
-        raise NotImplementedError
+        encoding = self.adapter.configs.get(CONFIG_REQUEST_ENCODING)
+        if not encoding:
+            encoding = context.server.configs.get(CONFIG_REQUEST_ENCODING, context.server.DEFAULT_REQUEST_ENCODING)
+        return encoding
 
-    def initResponse(self, message, context):
-        """Initialize the response
+    def startAsyncConsuming(self, channel):
+        """Start async consuming
         """
-        raise NotImplementedError
+        if self.channel:
+            raise ValueError('Consumer is already consuming')
+        self.channel = channel
 
-    def resolveParameters(self, message, context):
-        """Resolve parameters from message and context
+    def stopConsuming(self):
+        """Stop consuming
         """
-        raise NotImplementedError
+        self.channel = None
 
 class RabbitMQSubscriptionConsumer(RabbitMQConsumer):
     """A rabbitmq consumer
     """
     logger = logging.getLogger('unifiedrpc.adapter.rabbitmq.consumer.subscription')
 
-    def __init__(self, adapter, channel, endpoint, subscribeEndpoint):
+    def __init__(self, adapter, endpoint, subscribeEndpoint):
         """Create a new RabbitMQConsumer
         """
-        # Super
-        super(RabbitMQSubscriptionConsumer, self).__init__(adapter, channel, endpoint)
         self.subscribeEndpoint = subscribeEndpoint
-        # Start
-        self.startAsync()
+        self.consumerTag = str(uuid4())
+        # Super
+        super(RabbitMQSubscriptionConsumer, self).__init__(adapter, endpoint)
 
     def __call__(self, message):
         """The consuming method
         """
-        self.adapter.onMessageReceived(self, message)
+        # Start context
+        with contextspace(self.adapter.server, self.adapter):
+            # Initialize the context
+            try:
+                # Init context
+                self.adapter.server.initContext(context)
+                # Parse request
+                context.request = RabbitMQRequest(self, message)
+                if context.request.content and context.request.content.mimeType:
+                    if not context.request.content.encoding:
+                        context.request.content.encoding = self.getDefaultRequestContentEncoding()
+                    context.request.content.data = context.components.contentParser.parse(context)
+                # Get the parameters
+                params = {
+                    'routingKey': message.delivery_info['routing_key'],
+                    'data': context.request.content.data,
+                    'message': message,
+                    'publish': self.adapter.publish,
+                    'ack': self.adapter.ack
+                    }
+                context.dispatcher = Dispatcher(self.endpoint, params, consumer = self)
+                # Call the handler
+                context.dispatcher.endpoint.pipeline(context)
+            except Exception as error:
+                # Error happened
+                self.logger.exception('Error occurred when processing subscription message')
 
-    def startAsync(self):
-        """Start asynchronously
+    def startAsyncConsuming(self, channel):
+        """Start async consuming
         """
+        # Super
+        super(RabbitMQSubscriptionConsumer, self).startAsyncConsuming(channel)
+        # Conume queues
         for queue in self.subscribeEndpoint.queues:
-            self.channel.basic.consume(queue, self, no_ack = not self.subscribeEndpoint.ack)
+            channel.basic.consume(queue, self, self.consumerTag, no_ack = not self.subscribeEndpoint.ack)
             self.logger.info('Consume queue [%s]', queue)
 
-    def parseRequest(self, message):
-        """Get the request object
+    def stopConsuming(self):
+        """Stop consuming
         """
-        return RabbitMQSubscriptionRequest(self, message)
-
-    def initResponse(self, message, context):
-        """Initialize the response
-        """
-        context.response = Response()
-
-    def resolveParameters(self, message, context):
-        """Resolve parameters from message and context
-        """
-        return {
-            'routingKey': message.delivery_info['routing_key'],
-            'data': None,
-            'message': message,
-            'publish': self.adapter.publish,
-            'ack': self.adapter.ack
-            }
+        try:
+            self.channel.cancel(self.consumerTag)
+        except:
+            self.logger.exception('Failed to stop consuming by tag [%s]', self.consumerTag)
+        # Super
+        super(RabbitMQSubscriptionConsumer, self).stopConsuming()
 
 class RabbitMQAnnonymousSubscriptionConsumer(RabbitMQSubscriptionConsumer):
     """The rabbitmq annonymous subscription consumer
     """
     logger = logging.getLogger('unifiedrpc.adapter.rabbitmq.consumer.subscription.annonymous')
 
-    def startAsync(self):
-        """Start asynchronously
+    def startAsyncConsuming(self, channel):
+        """Start async consuming
         """
-        self.channel.queue.declare(auto_delete = True, cb = self.onQueueDeclared)
+        # Super
+        RabbitMQConsumer.startAsyncConsuming(self, channel)
+        # Declare anonymous queue
+        channel.queue.declare(auto_delete = True, cb = partial(self.onQueueDeclared, channel))
 
-    def onQueueDeclared(self, queue, msgCount, consumerCount):
+    def onQueueDeclared(self, channel, queue, msgCount, consumerCount):
         """On annoymous queue declared
         """
         self.logger.info('Annonymous queue [%s] declared', queue)
         # Bind
         for exchange, routingKey in self.subscribeEndpoint.bindings:
-            self.channel.queue.bind(queue, exchange, routingKey)
+            channel.queue.bind(queue, exchange, routingKey)
         # Consume
-        self.channel.basic.consume(queue, self, no_ack = not self.subscribeEndpoint.ack)
+        channel.basic.consume(queue, self, no_ack = not self.subscribeEndpoint.ack)
         self.logger.info('Consume queue [%s]', queue)
 

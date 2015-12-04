@@ -29,17 +29,17 @@ class JsonContentBuilder(ContentBuilder):
         Parameters:
             context                         The Context object
         Returns:
-            Nothing
+            The built content
         """
         if context.response.container:
             # Good, get the value and headers
             value, headers = context.response.container.dump()
             if headers:
-                self.applyHeaderResponse(headers)
+                self.applyHeaderResponse(headers, context)
             if not context.response.encoding:
                 raise ValueError('Require response encoding')
             if isinstance(value, (dict, tuple, list)):
-                context.response.content = json.dumps(value, ensure_ascii = False).encode(context.response.encoding)
+                return json.dumps(value, ensure_ascii = False).encode(context.response.encoding)
             else:
                 raise ValueError('Unsupported response value type [%s]' % type(value).__name__)
 

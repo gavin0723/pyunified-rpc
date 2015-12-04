@@ -11,9 +11,9 @@ import urlparse
 from werkzeug.wrappers import Request
 
 from unifiedrpc.errors import BadRequestError
-from unifiedrpc.protocol.request import RequestContent, AcceptContent, AcceptValue
+from unifiedrpc.protocol.request import Request as ProtocolRequest, RequestContent, AcceptContent, AcceptValue
 
-class WebRequest(Request):
+class WebRequest(Request, ProtocolRequest):
     """The web request class
     Attributes:
         queryParams                         The query parameters
@@ -22,22 +22,23 @@ class WebRequest(Request):
                                                 This class will only parse the necessary data structure in header but request body itself
         acceptContent                       The accept content, AcceptContent object
     """
-    def __init__(self, environ, startResponse):
+    def __init__(self, environ):
         """Create a new WebRequest
         """
-        # Super
-        super(WebRequest, self).__init__(environ)
-        # Set
-        self.startResponse = startResponse
+        # Super for werkzeug request
+        Request.__init__(self, environ)
         # Parse the query string
         # NOTE:
         #   Here, the value of queryParams a list: key -> [ value ]
         #   We will not change this value in order to support multiple values of a query parameter
         self.queryParams = self.parseQueryParameter()
-        # Parse the request content
-        self.requestContent = self.parseRequestContent()
-        # Parse the AcceptContent
-        self.acceptContent = self.parseAcceptContent()
+        # Super for protocol request
+        ProtocolRequest.__init__(self,
+            self.headers,
+            self.queryParams,
+            self.parseRequestContent(),
+            self.arseAcceptContent()
+            )
 
     def parseQueryParameter(self):
         """Parse the query parameters
@@ -73,3 +74,5 @@ class WebRequest(Request):
             charsets = list(sorted(map(lambda (v, q): AcceptValue(v, q), self.accept_charsets), key = lambda v: v.quality, reverse = True))
         # Done
         return AcceptContent(mimeTypes, charsets, encodings, languages)
+
+

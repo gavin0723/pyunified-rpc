@@ -17,7 +17,7 @@ class ParameterValueSelectionNode(ExecutionNode):
     def __call__(self, context, next):
         """Run this node logic
         """
-        webEndpoint, params = context.dispatch.webEndpoint, context.dispatch.params
+        webEndpoint, params = context.dispatcher.webEndpoint, context.dispatcher.params
         # Check it
         if webEndpoint.allowedMultiParams:
             if webEndpoint.allowedMultiParams == '*':

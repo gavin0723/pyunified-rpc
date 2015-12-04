@@ -36,12 +36,12 @@ class TextContentBuilder(ContentBuilder):
             # Good, get the value and headers
             value, headers = context.response.container.dump()
             if headers:
-                self.applyHeaderResponse(headers)
+                self.applyHeaderResponse(headers, context)
             if isinstance(value, str):
-                context.response.content = value
+                return value
             elif isinstance(value, unicode):
                 if not context.response.encoding:
                     raise ValueError('Require response encoding')
-                context.response.content = value.encode(context.response.encoding)
+                return value.encode(context.response.encoding)
             else:
-                context.response.content = str(value)
+                return str(value)

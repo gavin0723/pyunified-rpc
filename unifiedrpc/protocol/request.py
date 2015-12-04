@@ -14,16 +14,14 @@ class Request(object):
         params                          A dict which key is a string value is any kind of object. The request parameters which used as RPC method parameters
         content                         The request content, RequestContent object
         accept                          The accept content, AcceptContent object
-        raw                             The raw request object (which is different among adapters)
     """
-    def __init__(self, headers = None, params = None, content = None, accept = None, raw = None):
+    def __init__(self, headers = None, params = None, content = None, accept = None):
         """Create a new Request object
         """
         self.headers = headers
         self.params = params
         self.content = content
         self.accept = accept
-        self.raw = raw
 
 class RequestContent(object):
     """The body of the request

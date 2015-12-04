@@ -6,6 +6,8 @@
 
 from uuid import uuid4
 
+from werkzeug.routing import Rule
+
 from execnode import ParameterValueSelectionNode
 from definition import ENDPOINT_CHILDREN_WEBENDPOINT_KEY
 
@@ -65,3 +67,16 @@ class WebEndpoint(object):
             endpoint.pipeline.add(ParameterValueSelectionNode(), 10000)
         # Done
         return endpoint
+
+    def getUrlRule(self):
+        """Get the url rule
+        """
+        # Get the methods
+        if not self.method:
+            methods = None
+        elif isinstance(self.method, basestring):
+            methods = (self.method, )
+        else:
+            methods = self.method
+        # Create the Rule
+        return Rule(self.path, endpoint = self.id, methods = methods, host = self.host, subdomain = self.subdomain)

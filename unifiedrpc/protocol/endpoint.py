@@ -152,7 +152,7 @@ class Endpoint(object):
         # Build the final invoking parameters
         #   - Check the parameters
         #   - Set the default value
-        for param, value in context.dispatch.params.iteritems():
+        for param, value in context.dispatcher.params.iteritems():
             if not param in self.signature.parameter.args and not self.signature.parameter.isDynamic:
                 # Unknown parameter error
                 raise BadRequestParameterError(param)
@@ -242,7 +242,7 @@ class ExecutionPipeline(object):
         """
         execContext = ExecutionContext(
             [ node for node in map(lambda x: x[0], self.nodes) if not node.allowedAdapterTypes or context.adapter.type in node.allowedAdapterTypes ],
-            context.dispatch.endpoint.invoke,
+            context.dispatcher.endpoint.invoke,
             context
             )
         return execContext()

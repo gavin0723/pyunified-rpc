@@ -13,7 +13,7 @@ class ParameterTypeConversionNode(ExecutionNode):
     def __call__(self, context, next):
         """Run the conversion logic
         """
-        params, types = context.dispatch.params, context.dispatch.endpoint.signature.parameter.types
+        params, types = context.dispatcher.params, context.dispatcher.endpoint.signature.parameter.types
         for param, paramType in types.iteritems():
             if param in params:
                 try:

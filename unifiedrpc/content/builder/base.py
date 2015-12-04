@@ -23,10 +23,11 @@ class ContentBuilder(object):
         """
         raise NotImplementedError
 
-    def applyHeaderResponse(self, headers):
+    def applyHeaderResponse(self, headers, context):
         """Apply header response
         """
-        raise NotImplementedError
+        for header, value in headers.iteritems():
+            context.headers[header] = value
 
     def encodeHeaderValue(self, value):
         """Encode the header value

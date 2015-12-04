@@ -18,6 +18,6 @@ class SetDataAsParameterNode(ExecutionNode):
         """Run this node logic
         """
         if not context.request.content.data is None:
-            context.dispatch.params['data'] = context.request.content.data
+            context.dispatcher.params['data'] = context.request.content.data
         # Run next node
         return next()

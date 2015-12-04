@@ -39,7 +39,7 @@ class APIContentContainer(ContentContainer):
         """
         return self._object.get(self.KEY_META_ERROR)
 
-    def setError(self, code, reason, detail = None):
+    def setError(self, code = None, reason = None, detail = None):
         """Set the error
         """
         self._object[self.KEY_META_ERROR] = { 'code': code, 'reason': reason, 'detail': detail }

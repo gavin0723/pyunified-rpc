@@ -4,22 +4,21 @@
 """The dispatch definition
 """
 
-class Dispatch(object):
+class Dispatcher(object):
     """The dispatch class
     Attributes:
         endpoint                        The dispatched endpoint
-        params                          The final parameters to call endpoint
+        params                          The parameters to call endpoint
         attrs                           The dispatch attributes
     """
-    def __init__(self, endpoint, params = None, **kwargs):
+    def __init__(self, endpoint, params = None, **attrs):
         """Create a new Dispatch object
         """
         self.endpoint = endpoint
         self.params = params
-        self.attrs = kwargs
+        self.attrs = attrs
 
     def __getattr__(self, key):
         """Get the attribute
         """
         return self.attrs[key]
-

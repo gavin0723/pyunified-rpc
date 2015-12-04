@@ -40,7 +40,7 @@ class AutomaticContentBuilder(ContentBuilder):
         if not mimeType:
             mimeType = self.DEFAULT_MIME_TYPE
         if not mimeType in self.builders:
-            raise ValueError('Unsupported mime type [%s]' % context.respose.mimeType)
+            raise ValueError('Unsupported mime type [%s]' % context.response.mimeType)
         # Build
         return self.builders[mimeType].build(context)
 

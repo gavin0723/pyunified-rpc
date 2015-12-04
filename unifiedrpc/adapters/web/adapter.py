@@ -15,21 +15,34 @@ The known configs:
 import logging
 import traceback
 
-from werkzeug.routing import Map, Rule
+from gevent import pywsgi
+
+from werkzeug.routing import Map
 from werkzeug.exceptions import HTTPException, NotFound
-from werkzeug.wrappers import Response as WKResponse
+from werkzeug.wrappers import Response as WKResponse, Response as WKResponse
 from werkzeug.datastructures import Headers
 from werkzeug.http import HTTP_STATUS_CODES
 
+from unifiedrpc import context, contextspace
 from unifiedrpc.adapters import Adapter
-from unifiedrpc.protocol import Context, Request, Response, Dispatch
+from unifiedrpc.protocol import Context, Request, Response, Dispatcher
 from unifiedrpc.protocol.request import RequestContent
 from unifiedrpc.errors import *
 from unifiedrpc.definition import CONFIG_REQUEST_ENCODING
 
 from definition import ENDPOINT_CHILDREN_WEBENDPOINT_KEY
 from request import WebRequest
+from response import WebResponse
 from util import getContentType
+
+STAGE_BEFORE_REQUEST    = 0
+STAGE_BEFORE_DISPATCH   = 1
+STAGE_BEFORE_RESPONSE   = 2
+STAGE_BEFORE_HANDLER    = 3
+STAGE_BEFORE_SETVALUE   = 4
+STAGE_BEFORE_FORMATING  = 5
+STAGE_BEFORE_RESPOND    = 6
+STAGE_DONE              = 7
 
 # Bind errors to http status code
 ERROR_BINDINGS = {
@@ -58,6 +71,7 @@ class WebAdapter(Adapter):
     logger = logging.getLogger('unifiedrpc.adapter.web')
 
     REQUEST_CLASS       = WebRequest
+    RESPONSE_CLASS      = WebResponse
 
     def __init__(self, name, host, port, **configs):
         """Create a new WebAdapter
@@ -75,10 +89,8 @@ class WebAdapter(Adapter):
         # Set
         self.host = host
         self.port = port
-        self.endpoints = None       # A dict, key is web endpoint id, value is (WebEndpoint, Endpoint) object
+        self.endpoints = {}         # A dict, key is web endpoint id, value is (WebEndpoint, Endpoint) object
         self.urlMapper = None       # A werkzeug.routing.Map object
-        self.onRequestCallback = None
-        self.onErrorCallback = None
         # Super
         super(WebAdapter, self).__init__(name, **configs)
 
@@ -90,59 +102,107 @@ class WebAdapter(Adapter):
         Returns:
             Yield or list of string for http response content
         """
-        try:
-            context = self.onRequest((environ, startResponse))
-            return self.respond(context)
-        except Exception as error:
-            # Report the error
-            self.onError(error, traceback.format_exc(), 'Failed to complete the WSGI call')
-            # Under this circumstance, the response should be a simple 500 error
+        # Here, we create a context space
+        with contextspace(self.server, self):
+            # The context variable is available in this context
+            self.server.initContext(context)
+            stage = STAGE_BEFORE_REQUEST
             try:
-                startResponse('500 %s' % HTTP_STATUS_CODES[500], [ ]) # Respond 500 with no header
-            except Exception as innerError:
-                # Report this error
-                self.onError(innerError, traceback.format_exc(), 'Failed to call startResponse when handling a critical error')
-            # Return nothing
-            return tuple()
+                # Parse the rqequest
+                context.request = self.REQUEST_CLASS(environ)
+                # Parse the request content stream if have one
+                if context.request.content and context.request.content.mimeType:
+                    # Get the default encoding if not specified
+                    if not request.content.encoding:
+                        encoding = self.configs.get(CONFIG_REQUEST_ENCODING)
+                        if not encoding:
+                            encoding = context.server.configs.get(CONFIG_REQUEST_ENCODING, context.server.DEFAULT_REQUEST_ENCODING)
+                        request.content.encoding = encoding
+                    # Parse the content data
+                    context.request.content.data = context.components.contentParser.parse(context)
+                # Dispatch
+                stage = STAGE_BEFORE_DISPATCH
+                context.dispatcher = self.dispatch()
+                # Create the response object
+                stage = STAGE_BEFORE_RESPONSE
+                context.response = self.RESPONSE_CLASS()
+                context.server.initResponse(context)
+                # Invoke the endpoint
+                stage = STAGE_BEFORE_HANDLER
+                value = context.dispatcher.endpoint.pipeline(context)
+                # Check the value, if it is a response object, then just return
+                if isinstance(value, WKResponse):
+                    return value(environ, startResponse)
+                # Set the value to container
+                stage = STAGE_BEFORE_SETVALUE
+                context.response.container.setValue(value)
+                # Build context
+                stage = STAGE_BEFORE_FORMATING
+                context.response.content = context.components.contentBuilder.build(context)
+                # Return the response
+                stage = STAGE_BEFORE_RESPOND
+                return context.response(environ, startResponse)
+                # Well, done
+                stage = STAGE_DONE
+            except Exception as error:
+                # Error happened
+                # Check error type
+                if not type(error) in ERROR_BINDINGS:
+                    # Log the error with details
+                    self.logger.exception('Failed to handle http request')
+                    # Create a internal server error
+                    status = 500
+                    error = InternalServerError(ERRCODE_UNDEFINED)
+                else:
+                    # A http error
+                    status = ERROR_BINDINGS[type(error)]
+                    self.logger.error(str(error))
+                # Check stage
+                if stage <= STAGE_BEFORE_RESPONSE:
+                    # Create the response
+                    try:
+                        context.response = self.RESPONSE_CLASS(status = status)
+                        context.server.initResponse(context)
+                    except:
+                        # Failed to initialize the response, will use the default response
+                        self.logger.exception('Failed to initialize the response when handling error')
+                        return WKResponse(status = status)(environ, startResponse)
+                else:
+                    # Set the response status
+                    context.response.status_code = status
+                # Set the error response
+                try:
+                    context.response.container.setError(error.code, error.reason, error.detail)
+                except:
+                    # Failed to set error to container
+                    self.logger.exception('Failed to set error to container when handling error')
+                    return WKResponse(status = status)(environ, startResponse)
+                # Format value
+                try:
+                    context.response.content = context.components.contentBuilder.build(context)
+                except:
+                    # Failed to build content
+                    self.logger.exception('Failed to build content when handling error')
+                    return WKResponse(status = status)(environ, startResponse)
+                # Return the response
+                try:
+                    return context.response(environ, startResponse)
+                except:
+                    # Failed to respond
+                    self.logger.exception('Failed to respond when handling error')
+                    return WKResponse(status = status)(environ, startResponse)
 
-    def parseRequest(self, incoming, context):
-        """Parse the request, set the context
-        """
-        environ, startResponse = incoming
-        # Parse the request
-        rawRequest = self.REQUEST_CLASS(environ, startResponse)
-        # Check the encoding
-        if not rawRequest.requestContent.encoding:
-            encoding = self.configs.get(CONFIG_REQUEST_ENCODING)
-            if not encoding:
-                encoding = context.server.configs.get(CONFIG_REQUEST_ENCODING, context.server.DEFAULT_REQUEST_ENCODING)
-            rawRequest.requestContent.encoding = encoding
-        # Create the protocol request
-        request = Request(
-            headers = rawRequest.headers,
-            params = rawRequest.queryParams,
-            content = rawRequest.requestContent,
-            accept = rawRequest.acceptContent,
-            raw = rawRequest
-            )
-        # Set the context
-        context.request = request
-
-    def initResponse(self, incoming, context):
-        """Initialize the response, set the context
-        """
-        # Create the protocol response, and set the context
-        context.response = Response()
-
-    def dispatch(self, context):
-        """Dispatch the request
+    def dispatch(self):
+        """Dispatch the request for current context
+        Returns:
+            Dispatcher object
         """
         # Check parameters
         if not self.endpoints or not self.urlMapper:
             raise NotFoundError
         # Map the url
         try:
-            urlAdapter = self.urlMapper.bind_to_environ(context.request.raw.environ)
+            urlAdapter = self.urlMapper.bind_to_environ(context.request.environ)
             webEndpointID, urlParams = urlAdapter.match()
         except NotFound:
             raise NotFoundError
@@ -155,149 +215,88 @@ class WebAdapter(Adapter):
         params = {}
         if urlParams:
             params.update(urlParams)
-        if context.request.raw.queryParams:
-            params.update(context.request.raw.queryParams)
+        if context.request.params:
+            params.update(context.request.params)
         # NOTE:
         #   Here, we don't check if the parameters are fit since there may have other processors to change the params
         #   We leave this to the place right before invoking endpoint itself
-        # Set the dispatcher
-        context.dispatch = Dispatch(
-            endpoint,
-            params,
-            endpointID = endpoint.id,
-            webEndpointID = webEndpointID,
-            urlParams = urlParams,
-            webEndpoint = webEndpoint
-            )
+        # Return the dispatcher
+        return Dispatcher(endpoint, params, endpointID = endpoint.id, webEndpointID = webEndpointID, urlParams = urlParams, webEndpoint = webEndpoint)
 
-    def onRequest(self, incoming):
-        """On request
-        Parameters:
-            incoming                        The incoming (envion, startResponse)
-        Returns:
-            response content or None
+    def getWebEndpointsFromService(self, service):
+        """Get web endpoints from service
         """
-        cb = self.onRequestCallback
-        if not cb:
-            raise RuntimeError('Request callback not found')
-        # Done
-        return cb(incoming, self)
-
-    def onError(self, error, traceback = None, message = None):
-        """On process error
-        """
-        cb = self.onErrorCallback
-        if not cb:
-            raise RuntimeError('Error callback not found')
-        # Done
-        return cb(error, self, traceback, message)
-
-    def handleError(self, error, traceback, incoming, context):
-        """Handle the request error
-        Parameters:
-            error                       The error object
-            traceback                   The traceback string
-            incoming                    The incoming parameters
-            context                     The context
-        Returns:
-            Nothing
-        """
-        environ, startResponse = incoming
-        # Check error bindings
-        if type(error) in ERROR_BINDINGS:
-            # Good, found it
-            context.response.status = ERROR_BINDINGS[type(error)]
-        elif isinstance(error, HTTPException):
-            # A werkzeug http exception
-            context.response.werkzeug = error.get_response(context.request.raw.environ)
-        else:
-            # Treat as internal server error
-            context.response.status = 500
-
-    def setEndpoints(self, srvEndpoints):
-        """Set the endpoints
-        """
-        totalWebEndpoints = {}      # A dict of endpoint
-        urlRules = []               # A list of url routing rules
-        for service, endpoints in srvEndpoints:
-            # Bootup service
-            hasWebEndpoint = False
-            # Add all endpoints
+        endpoints = service.getEndpoints()
+        if endpoints:
             for endpoint in endpoints:
-                # Get the web endpoint
                 webEndpoints = endpoint.children.get(ENDPOINT_CHILDREN_WEBENDPOINT_KEY)
                 if webEndpoints:
-                    # Has web endpoint
-                    hasWebEndpoint = True
                     for webEndpoint in webEndpoints.itervalues():
-                        # Good, lets add this endpoint
-                        if webEndpoint.id in totalWebEndpoints:
-                            raise ValueError('Web endpoint id [%s] duplicated' % webEndpoint.id)
-                        totalWebEndpoints[webEndpoint.id] = (webEndpoint, endpoint)
-                        # Get the methods
-                        if not webEndpoint.method:
-                            methods = None
-                        elif isinstance(webEndpoint.method, basestring):
-                            methods = (webEndpoint.method, )
-                        else:
-                            methods = webEndpoint.method
-                        # Add the rule
-                        urlRules.append(Rule(webEndpoint.path, endpoint = webEndpoint.id, methods = methods, host = webEndpoint.host, subdomain = webEndpoint.subdomain))
-            # Boot up service
-            if hasWebEndpoint:
-                service.bootup(self)
-        # Done
-        self.endpoints = totalWebEndpoints
-        self.urlMapper = Map(urlRules)
+                        yield webEndpoint, endpoint
 
-    def respond(self, context = None):
-        """Respond the request
-        Parameters:
-            context                             The Context object
-        Returns:
-            Nothing
-        NOTE:
-            Call this method out of __call__ method context will cause response headers to be returned
+    def addService(self, service):
+        """Add a service
         """
-        if not context:
-            context = Context.current()
-        # Create the response object
-        if not hasattr(context.response, 'werkzeug'):
-            response = WKResponse(
-                context.response.content,
-                status = context.response.status,
-                headers = context.response.headers.items(),
-                content_type = getContentType(context.response.mimeType, context.response.encoding)
-                )
-        else:
-            # NOTE: This is a little tricky to directly use the werkzeug response when error occurred
-            response = context.response.werkzeug
-        # Check if the request has already responded
-        if hasattr(context, 'responded') and context.responded:
-            # Responded, get the response content, only return the content without calling startResponse again
-            app_iter, status, headers = response.get_wsgi_response(context.request.environ)
-            return app_iter
-        else:
-            # Respond
-            context.responded = True
-            return response(context.request.raw.environ, context.request.raw.startResponse)
+        hasWebEndpoint = False
+        for webEndpoint, endpoint in self.getWebEndpointsFromService(service):
+            hasWebEndpoint = True
+            # Add this web endpoint
+            if webEndpoint.id in self.endpoints:
+                raise ValueError('Web endpoint id [%s] duplicated' % webEndpoint.id)
+            self.endpoints[webEndpoint.id] = (webEndpoint, endpoint)
+            # Add url rule
+            if not self.urlMapper:
+                self.urlMapper = Map([ webEndpoint.getUrlRule() ])
+            else:
+                self.urlMapper.add(webEndpoint.getUrlRule())
+        # Boot up service
+        if hasWebEndpoint:
+            service.bootup(self)
 
-    def startAsync(self, onRequestCallback, onErrorCallback, srvEndpoints):
+    def removeService(self, service):
+        """Remove a service
+        """
+        if not isinstance(service, (tuple, list)):
+            service = (service, )
+        # Removed services
+        removedServices = []
+        for srv in service:
+            # Remove endpoints
+            hasWebEndpoint = False
+            for webEndpoint, endpoint in self.getWebEndpointsFromService(srv):
+                hasWebEndpoint = True
+                if webEndpoint.id in self.endpoints:
+                    del self.endpoints[webEndpoint.id]
+            if hasWebEndpoint:
+                removedServices.append(srv)
+        # Rebuild url rules
+        urlRules = []
+        for webEndpoint, endpoint in self.endpoints.itervalues():
+            urlRules.append(webEndpoint.getUrlRule())
+        self.urlMapper = Map(urlRules)
+        # Shutdown service
+        if removedServices:
+            for srv in removedServices:
+                srv.shutdown(self)
+
+    def cleanServices(self, services):
+        """Clean all service
+        """
+        self.removeService(services)
+
+    def startAsync(self):
         """Start asynchronously
         """
-        # Set endpoints
-        self.setEndpoints(srvEndpoints)
-        # Set callback
-        self.onRequestCallback = onRequestCallback
-        self.onErrorCallback = onErrorCallback
+        # Generate url routing rules for the existing endpoints
+        urlRules = []
+        for webEndpoint, endpoint in self.endpoints.itervalues():
+            urlRules.append(webEndpoint.getUrlRule())
+        self.urlMapper = Map(urlRules)
 
     def close(self):
         """Close current adapter
         """
-        self.endpoints = None
         self.urlMapper = None
-        self.onRequestCallback = None
-        self.onErrorCallback = None
 
 class GeventWebAdapter(WebAdapter):
     """The gevent web adapter
@@ -306,39 +305,53 @@ class GeventWebAdapter(WebAdapter):
     def __init__(self, name, host, port, **configs):
         """Create a new GeventWebAdapter
         """
-        self.server = None
+        self.geventWSGIServer = None
         # Super
         super(GeventWebAdapter, self).__init__(name, host, port, **configs)
 
-    def startAsync(self, onRequestCallback, onErrorCallback, endpoints):
+    @property
+    def started(self):
+        """Tell if this adapter is started or not
+        """
+        return not self.geventWSGIServer is None
+
+    def startAsync(self):
         """Start asynchronously
         """
-        if not onRequestCallback:
-            raise ValueError('Require parameter onRequestCallback')
-        if self.server:
-            raise ValueError('Adapter has already started')
         # Super
-        super(GeventWebAdapter, self).startAsync(onRequestCallback, onErrorCallback, endpoints)
+        super(GeventWebAdapter, self).startAsync()
         # Start gevent wsgi server
-        from gevent import pywsgi
         # Get logger
         serverLogger = logging.getLogger('unifiedrpc.adapter.web.gevent')
-        self.server = pywsgi.WSGIServer(
+        geventWSGIServer = pywsgi.WSGIServer(
             (self.host, self.port),
             self,       # The application callable object
-            log = pywsgi.LoggingLogAdapter(serverLogger, logging.INFO),
-            error_log = pywsgi.LoggingLogAdapter(serverLogger, logging.ERROR),
+            #log = pywsgi.LoggingLogAdapter(serverLogger, logging.INFO),
+            #error_log = pywsgi.LoggingLogAdapter(serverLogger, logging.ERROR),
+            log = GeventLogAdapter(serverLogger, logging.INFO),
+            error_log = GeventLogAdapter(serverLogger, logging.ERROR)
             )
-        self.server.start()
+        geventWSGIServer.start()
+        # Good, started
+        self.geventWSGIServer = geventWSGIServer
         # Log it
         self.logger.info('Gevent WSGI server starts service at %s:%d', self.host, self.port)
 
     def close(self):
         """Close current adapter
         """
-        if not self.server:
+        if not self.geventWSGIServer:
             raise ValueError('Adapter hasn\'t started')
-        self.server.close()
-        self.server = None
+        self.geventWSGIServer.close()
+        self.geventWSGIServer = None
         # Super
         super(GeventWebAdapter, self).close()
+
+class GeventLogAdapter(pywsgi.LoggingLogAdapter):
+    """The gevent log adapter
+    """
+    def write(self, msg):
+        """Write the message
+        """
+        super(GeventLogAdapter, self).write(msg.strip())
+

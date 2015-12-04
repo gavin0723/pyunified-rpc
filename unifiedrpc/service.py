@@ -8,6 +8,8 @@ from protocol import Endpoint
 
 class Service(object):
     """The service
+    Attributes:
+        name                    The unique service name
     """
     def __init__(self, name):
         """Create a new Service
