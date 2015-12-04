@@ -16,7 +16,6 @@ import threading
 import traceback
 
 from protocol import Context, Request, Response
-from discover import ServiceEndpointDiscover
 from content.parser.aggregate import AggregateContentParser
 from content.builder.automatic import AutomaticContentBuilder
 from content.container.plain import PlainContentContainer
@@ -71,15 +70,9 @@ class Server(object):
         Returns:
             Nothing
         """
-        # Get the response mime type
-        if not context.response.mimeType:
-            context.response.mimeType = self.getResponseMimeType(context)
-        # Get the response encoding
-        if not context.response.encoding:
-            context.response.encoding = self.getResponseEncoding(context)
-        # Get the response container
-        if not context.response.container:
-            context.response.container = self.getResponseContainer(context)
+        context.response.mimeType = self.getResponseMimeType(context)
+        context.response.encoding = self.getResponseEncoding(context)
+        context.response.container = self.getResponseContainer(context)
 
     def getResponseMimeType(self, context):
         """Get the response mimeType

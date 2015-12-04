@@ -71,6 +71,12 @@ class WebResponse(Response):
         self._encoding = value
         self.setContentType(encoding = value)
 
+    @property
+    def contentType(self):
+        """Get the content type
+        """
+        return self.content_type
+
     def setContentType(self, mimeType = None, encoding = None):
         """Set the content type
         """

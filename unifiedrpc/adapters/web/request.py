@@ -37,7 +37,7 @@ class WebRequest(Request, ProtocolRequest):
             self.headers,
             self.queryParams,
             self.parseRequestContent(),
-            self.arseAcceptContent()
+            self.parseAcceptContent()
             )
 
     def parseQueryParameter(self):

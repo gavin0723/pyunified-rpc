@@ -113,11 +113,11 @@ class WebAdapter(Adapter):
                 # Parse the request content stream if have one
                 if context.request.content and context.request.content.mimeType:
                     # Get the default encoding if not specified
-                    if not request.content.encoding:
+                    if not context.request.content.encoding:
                         encoding = self.configs.get(CONFIG_REQUEST_ENCODING)
                         if not encoding:
                             encoding = context.server.configs.get(CONFIG_REQUEST_ENCODING, context.server.DEFAULT_REQUEST_ENCODING)
-                        request.content.encoding = encoding
+                        context.request.content.encoding = encoding
                     # Parse the content data
                     context.request.content.data = context.components.contentParser.parse(context)
                 # Dispatch
@@ -127,6 +127,7 @@ class WebAdapter(Adapter):
                 stage = STAGE_BEFORE_RESPONSE
                 context.response = self.RESPONSE_CLASS()
                 context.server.initResponse(context)
+                # TODO: Set the response by adapter and endpoint config
                 # Invoke the endpoint
                 stage = STAGE_BEFORE_HANDLER
                 value = context.dispatcher.endpoint.pipeline(context)
@@ -326,8 +327,6 @@ class GeventWebAdapter(WebAdapter):
         geventWSGIServer = pywsgi.WSGIServer(
             (self.host, self.port),
             self,       # The application callable object
-            #log = pywsgi.LoggingLogAdapter(serverLogger, logging.INFO),
-            #error_log = pywsgi.LoggingLogAdapter(serverLogger, logging.ERROR),
             log = GeventLogAdapter(serverLogger, logging.INFO),
             error_log = GeventLogAdapter(serverLogger, logging.ERROR)
             )
