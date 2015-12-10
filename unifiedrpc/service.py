@@ -26,6 +26,14 @@ class Service(object):
         """
         pass
 
+    def onEvent(self, event, args):
+        """On an event occurred
+        Parameters:
+            event                   The event name
+            args                    The event args
+        """
+        pass
+
     def getEndpoints(self):
         """Get the endpoints of current service
         Returns:
@@ -37,3 +45,4 @@ class Service(object):
             if isinstance(value, Endpoint):
                 endpoints.append(value)
         return endpoints
+
