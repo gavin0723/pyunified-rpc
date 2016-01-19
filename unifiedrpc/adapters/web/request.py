@@ -74,5 +74,3 @@ class WebRequest(Request, ProtocolRequest):
             charsets = list(sorted(map(lambda (v, q): AcceptValue(v, q), self.accept_charsets), key = lambda v: v.quality, reverse = True))
         # Done
         return AcceptContent(mimeTypes, charsets, encodings, languages)
-
-

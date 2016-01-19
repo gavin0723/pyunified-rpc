@@ -4,20 +4,54 @@
 """The endpoint pipeline execution nodes
 """
 
-from unifiedrpc.errors import BadRequestError
-from unifiedrpc.protocol.endpoint import ExecutionNode
+from werkzeug.wrappers import Response as WKResponse
 
-class ParameterValueSelectionNode(ExecutionNode):
-    """The parameter value selection node
+from unifiedrpc.errors import BadRequestError
+from unifiedrpc.protocol import Caller
+
+from util import getContentType
+
+class ResponseFinalBuildCaller(Caller):
+    """The final build of response
+    """
+    allowedAdapterTypes = [ 'web' ]
+
+    def __call__(self, context, next):
+        """Do final response build
+        Returns:
+            werkzeug.wrappers.Response object
+        """
+        value = next()
+        # Check the response
+        if isinstance(value, WKResponse):
+            return value
+        # Build the response
+        # Set session
+        if context.adapter.sessionManager:
+            context.adapter.sessionManager.set(context.session, context.response)
+        # Set the value to container
+        context.response.container.setValue(value)
+        # Build context
+        context.response.content = context.components.contentBuilder.build(context)
+        # Return the response
+        return WKResponse(
+            status = context.response.status,
+            headers = context.response.headers,
+            response = (context.response.content, ) if isinstance(context.response.content, basestring) else context.response.content,
+            content_type = getContentType(context.response.mimeType, context.response.encoding)
+            )
+
+class ParameterValueSelectionCaller(Caller):
+    """The parameter value selection caller
     NOTE:
-        This execution node is used to select the parameters from url / query array parameter values by endpoint config
+        This calleris used to select the parameters from url / query array parameter values by endpoint config
     """
     allowedAdapterTypes = [ 'web' ]
 
     def __call__(self, context, next):
         """Run this node logic
         """
-        webEndpoint, params = context.dispatcher.webEndpoint, context.dispatcher.params
+        webEndpoint, params = context.webEndpoint, context.params
         # Check it
         if webEndpoint.allowedMultiParams:
             if webEndpoint.allowedMultiParams == '*':
@@ -59,4 +93,3 @@ class ParameterValueSelectionNode(ExecutionNode):
                         raise BadRequestError
         # Run next node
         return next()
-

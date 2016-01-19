@@ -9,7 +9,7 @@
 
 """
 
-ENDPOINT_CHILDREN_RABBITMQ_SUBCRIBE_ENDPOINT_KEY        = 'rabbitmq.subscribe.endpoint'
+ENDPOINT_CHILDREN_RABBITMQ_SUBCRIBE_ENDPOINT_KEY    = 'rabbitmq.subscribe.endpoint'
 
-DEFAULT_PUBLISH_CONTENT_TYPE_KEY            = 'defaultPublishContentType'
-DEFAULT_PUBLISH_CONTENT_ENCODING_KEY        = 'defaultPublishContentEncoding'
+CONFIG_PUBLISH_CONTENT_TYPE                         = 'publish.contentType'
+CONFIG_PUBLISH_CONTENT_ENCODING                     = 'publish.contentEncoding'

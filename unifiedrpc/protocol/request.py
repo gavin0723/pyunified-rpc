@@ -6,6 +6,8 @@
 
 from collections import namedtuple
 
+from unifiedrpc import CONFIG_RESPONSE_ENCODING
+
 class Request(object):
     """The request class
     This is a general request object
@@ -15,6 +17,8 @@ class Request(object):
         content                         The request content, RequestContent object
         accept                          The accept content, AcceptContent object
     """
+    DEFAULT_RESPONSE_ENCODING   = 'utf-8'
+
     def __init__(self, headers = None, params = None, content = None, accept = None):
         """Create a new Request object
         """
@@ -22,6 +26,17 @@ class Request(object):
         self.params = params
         self.content = content
         self.accept = accept
+
+    def getDefinedEncoding(self, context):
+        """Get the defined request encoding
+        """
+        encoding = context.adapter.configs.get(CONFIG_RESPONSE_ENCODING)
+        if not encoding:
+            encoding = context.runtime.configs.get(CONFIG_RESPONSE_ENCODING)
+        if not encoding:
+            encoding = self.DEFAULT_RESPONSE_ENCODING
+        # Done
+        return encoding
 
 class RequestContent(object):
     """The body of the request

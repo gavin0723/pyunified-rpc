@@ -16,10 +16,9 @@ from unifiedrpc.protocol.request import Request, RequestContent
 class RabbitMQRequest(Request):
     """The rabbitmq request
     """
-    def __init__(self, consumer, message):
+    def __init__(self, message):
         """Create a new RabbitMQSubscriptionRequest
         """
-        self.consumer = consumer
         self.message = message
         self.properties = message.properties
         # Get headers

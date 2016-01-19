@@ -9,89 +9,24 @@
 
 """
 
-import mime
+from werkzeug.wrappers import Response as WKResponse
 
-from werkzeug.wrappers import Response
-
-from util import getContentType
+from unifiedrpc.protocol import Response
 
 class WebResponse(Response):
     """The web response
     """
-    def __init__(self, *args, **kwargs):
+    def __init__(self, status = None, **kwargs):
         """Create a new WebResponse
         """
-        self._mimeType = 'text/plain'
-        self._encoding = 'utf-8'
-        self._content = None
-        self.container = None
+        self.status = status
         # Super
-        Response.__init__(self, *args, **kwargs)
+        super(WebResponse, self).__init__(**kwargs)
 
-    @property
-    def content(self):
-        """Get the content
-        """
-        return self._content
-
-    @content.setter
-    def content(self, value):
-        """Set the content
-        """
-        self._content = value
-        # Set the response
-        if isinstance(value, basestring):
-            self.response = (value, )
-        else:
-            self.response = value
-
-    @property
-    def mimeType(self):
-        """Get the mime type
-        """
-        return self._mimeType
-
-    @mimeType.setter
-    def mimeType(self, value):
-        """Set the mime type
-        """
-        self._mimeType = value
-        self.setContentType(mimeType = value)
-
-    @property
-    def encoding(self):
-        """Get the encoding
-        """
-        return self._encoding
-
-    @encoding.setter
-    def encoding(self, value):
-        """Set the encoding
-        """
-        self._encoding = value
-        self.setContentType(encoding = value)
-
-    @property
-    def contentType(self):
-        """Get the content type
-        """
-        return self.content_type
-
-    def setContentType(self, mimeType = None, encoding = None):
-        """Set the content type
-        """
-        self.content_type = getContentType(mimeType or self._mimeType, encoding or self._encoding)
-
-def redirect(location, statusCode = 302, content = None):
-    """Create a new Redirect
+class Redirect(WKResponse):
+    """The redirect
     """
-    from unifiedrpc import context
-    context.response.status_code = statusCode
-    context.response.headers['Location'] = location
-    context.response.content = content or ''
-    # Return the response object
-    return context.response
-
-# Well, make it looks like a class not a method
-Redirect = redirect
-
+    def __init__(self, location, status = 302, content = None):
+        """Create a new Redirect
+        """
+        super(Redirect, self).__init__(response = content, status = status, headers = { 'Location': location })

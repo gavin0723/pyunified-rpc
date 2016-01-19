@@ -19,21 +19,18 @@ from gevent import pywsgi
 
 from werkzeug.routing import Map
 from werkzeug.exceptions import HTTPException, NotFound
-from werkzeug.wrappers import Response as WKResponse, Response as WKResponse
-from werkzeug.datastructures import Headers
-from werkzeug.http import HTTP_STATUS_CODES
+from werkzeug.wrappers import Response as WKResponse
 
-from unifiedrpc import context, contextspace
+from unifiedrpc import context, contextspace, CONFIG_SESSION_MANAGER
 from unifiedrpc.adapters import Adapter
-from unifiedrpc.protocol import Context, Request, Response, Dispatcher
-from unifiedrpc.protocol.request import RequestContent
+from unifiedrpc.protocol.runtime import ServiceAdapterRuntime
 from unifiedrpc.errors import *
 from unifiedrpc.definition import CONFIG_REQUEST_ENCODING
 
-from definition import ENDPOINT_CHILDREN_WEBENDPOINT_KEY, \
-        CONFIG_SESSION_MANAGER
+from definition import ENDPOINT_CHILDREN_WEBENDPOINT_KEY
 from request import WebRequest
 from response import WebResponse
+from caller import ResponseFinalBuildCaller, ParameterValueSelectionCaller
 from util import getContentType
 
 STAGE_BEFORE_REQUEST    = 0
@@ -91,7 +88,9 @@ class WebAdapter(Adapter):
         self.host = host
         self.port = port
         self.endpoints = {}         # A dict, key is web endpoint id, value is (WebEndpoint, Endpoint) object
+        self.runtimes = {}          # A dict, key is service name, value is WebServiceAdapterRuntime
         self.urlMapper = None       # A werkzeug.routing.Map object
+        self.runtime = None
         # Session
         self.sessionManager = configs.get(CONFIG_SESSION_MANAGER)
         # Super
@@ -105,59 +104,40 @@ class WebAdapter(Adapter):
         Returns:
             Yield or list of string for http response content
         """
+        stage = None
         # Here, we create a context space
-        with contextspace(self.server, self):
-            # The context variable is available in this context
-            self.server.initContext(context)
-            stage = STAGE_BEFORE_REQUEST
+        with contextspace(self.runtime, self):
             try:
+                stage = STAGE_BEFORE_REQUEST
                 # Parse the rqequest
                 context.request = self.REQUEST_CLASS(environ)
                 # Parse the request content stream if have one
                 if context.request.content and context.request.content.mimeType:
                     # Get the default encoding if not specified
                     if not context.request.content.encoding:
-                        encoding = self.configs.get(CONFIG_REQUEST_ENCODING)
-                        if not encoding:
-                            encoding = context.server.configs.get(CONFIG_REQUEST_ENCODING, context.server.DEFAULT_REQUEST_ENCODING)
-                        context.request.content.encoding = encoding
+                        context.request.content.encoding = context.request.getDefinedEncoding(context)
                     # Parse the content data
                     context.request.content.data = context.components.contentParser.parse(context)
                 # Get session
                 if self.sessionManager:
                     context.session = self.sessionManager.get(context.request)
-                # Dispatch
+                # Dispatch the request
                 stage = STAGE_BEFORE_DISPATCH
-                context.dispatcher = self.dispatch()
+                endpoint, params, webEndpoint = self.dispatch()
+                context.endpoint = endpoint
+                context.params = params
+                context.webEndpoint = webEndpoint
                 # Create the response object
                 stage = STAGE_BEFORE_RESPONSE
                 context.response = self.RESPONSE_CLASS()
-                context.server.initResponse(context)
-                # TODO: Set the response by adapter and endpoint config
                 # Invoke the endpoint
                 stage = STAGE_BEFORE_HANDLER
-                value = context.dispatcher.endpoint.pipeline(context)
-                # Set session
-                if self.sessionManager:
-                    if context.shouldCleanSession:
-                        self.sessionManager.clean(context.response)
-                    else:
-                        self.sessionManager.set(context.session, context.response)
-                # Check the value, if it is a response object, then just return
-                if isinstance(value, WKResponse):
-                    # Skip all following steps
-                    return value(environ, startResponse)
-                # Set the value to container
-                stage = STAGE_BEFORE_SETVALUE
-                context.response.container.setValue(value)
-                # Build context
-                stage = STAGE_BEFORE_FORMATING
-                context.response.content = context.components.contentBuilder.build(context)
-                # Return the response
-                stage = STAGE_BEFORE_RESPOND
-                return context.response(environ, startResponse)
-                # Well, done
-                stage = STAGE_DONE
+                response = context.endpoint(context, [
+                    (ResponseFinalBuildCaller(), 10000),
+                    (ParameterValueSelectionCaller(), 20000),
+                    ])
+                return response(environ, startResponse)
+                # Done
             except Exception as error:
                 # Error happened
                 # Check error type
@@ -176,7 +156,6 @@ class WebAdapter(Adapter):
                     # Create the response
                     try:
                         context.response = self.RESPONSE_CLASS(status = status)
-                        context.server.initResponse(context)
                     except:
                         # Failed to initialize the response, will use the default response
                         self.logger.exception('Failed to initialize the response when handling error')
@@ -200,7 +179,12 @@ class WebAdapter(Adapter):
                     return WKResponse(status = status)(environ, startResponse)
                 # Return the response
                 try:
-                    return context.response(environ, startResponse)
+                    return WKResponse(
+                        status = status,
+                        headers = context.response.headers,
+                        response = (context.response.content, ) if isinstance(context.response.content, basestring) else context.response.content,
+                        content_type = getContentType(context.response.mimeType, context.response.encoding)
+                        )(environ, startResponse)
                 except:
                     # Failed to respond
                     self.logger.exception('Failed to respond when handling error')
@@ -209,7 +193,7 @@ class WebAdapter(Adapter):
     def dispatch(self):
         """Dispatch the request for current context
         Returns:
-            Dispatcher object
+            ActiveEndpoint, parameters, WebEndpoint
         """
         # Check parameters
         if not self.endpoints or not self.urlMapper:
@@ -219,11 +203,12 @@ class WebAdapter(Adapter):
             urlAdapter = self.urlMapper.bind_to_environ(context.request.environ)
             webEndpointID, urlParams = urlAdapter.match()
         except NotFound:
-            raise NotFoundError
+            # Not found
+            raise NotFoundError(ERRCODE_NOTFOUND_ENDPOINT_NOT_FOUND)
         # Get the endpoint
         res = self.endpoints.get(webEndpointID)
         if not res:
-            raise NotFoundError
+            raise NotFoundError(ERRCODE_NOTFOUND_ENDPOINT_NOT_FOUND)
         webEndpoint, endpoint = res
         # Create the params
         params = {}
@@ -235,25 +220,18 @@ class WebAdapter(Adapter):
         #   Here, we don't check if the parameters are fit since there may have other processors to change the params
         #   We leave this to the place right before invoking endpoint itself
         # Return the dispatcher
-        return Dispatcher(endpoint, params, endpointID = endpoint.id, webEndpointID = webEndpointID, urlParams = urlParams, webEndpoint = webEndpoint)
+        return endpoint, params, webEndpoint
 
-    def getWebEndpointsFromService(self, service):
-        """Get web endpoints from service
+    def attach(self, serviceRuntime):
+        """Attach a service
+        Returns:
+            ServiceAdapterRuntime
         """
-        endpoints = service.getEndpoints()
-        if endpoints:
-            for endpoint in endpoints:
-                webEndpoints = endpoint.children.get(ENDPOINT_CHILDREN_WEBENDPOINT_KEY)
-                if webEndpoints:
-                    for webEndpoint in webEndpoints.itervalues():
-                        yield webEndpoint, endpoint
-
-    def addService(self, service):
-        """Add a service
-        """
-        hasWebEndpoint = False
-        for webEndpoint, endpoint in self.getWebEndpointsFromService(service):
-            hasWebEndpoint = True
+        # Check name
+        if serviceRuntime.service.name in self.runtimes:
+            raise ValueError('Conflict service [%s]' % serviceRuntime.service.name)
+        # Attach this service
+        for webEndpoint, endpoint in self.getEndpointsFromService(serviceRuntime.service):
             # Add this web endpoint
             if webEndpoint.id in self.endpoints:
                 raise ValueError('Web endpoint id [%s] duplicated' % webEndpoint.id)
@@ -263,54 +241,39 @@ class WebAdapter(Adapter):
                 self.urlMapper = Map([ webEndpoint.getUrlRule() ])
             else:
                 self.urlMapper.add(webEndpoint.getUrlRule())
-        # Boot up service
-        if hasWebEndpoint:
-            service.bootup(self)
+        # Create runtime and add
+        runtime = WebServiceAdapterRuntime(self, serviceRuntime)
+        self.runtimes[serviceRuntime.service.name] = runtime
+        # Done
+        return runtime
 
-    def removeService(self, service):
-        """Remove a service
-        """
-        if not isinstance(service, (tuple, list)):
-            service = (service, )
-        # Removed services
-        removedServices = []
-        for srv in service:
-            # Remove endpoints
-            hasWebEndpoint = False
-            for webEndpoint, endpoint in self.getWebEndpointsFromService(srv):
-                hasWebEndpoint = True
-                if webEndpoint.id in self.endpoints:
-                    del self.endpoints[webEndpoint.id]
-            if hasWebEndpoint:
-                removedServices.append(srv)
-        # Rebuild url rules
-        urlRules = []
-        for webEndpoint, endpoint in self.endpoints.itervalues():
-            urlRules.append(webEndpoint.getUrlRule())
-        self.urlMapper = Map(urlRules)
-        # Shutdown service
-        if removedServices:
-            for srv in removedServices:
-                srv.shutdown(self)
-
-    def cleanServices(self, services):
-        """Clean all service
-        """
-        self.removeService(services)
-
-    def startAsync(self):
+    def startAsync(self, runtime):
         """Start asynchronously
         """
+        self.runtime = runtime
         # Generate url routing rules for the existing endpoints
         urlRules = []
         for webEndpoint, endpoint in self.endpoints.itervalues():
             urlRules.append(webEndpoint.getUrlRule())
         self.urlMapper = Map(urlRules)
 
-    def close(self):
+    def shutdown(self):
         """Close current adapter
         """
         self.urlMapper = None
+        self.endpoints = {}
+        self.runtimes = {}
+
+    @classmethod
+    def getEndpointsFromService(cls, service):
+        """Get  endpoints from service
+        """
+        if service.activeEndpoints:
+            for endpoint in service.activeEndpoints.itervalues():
+                webEndpoints = endpoint.endpoint.children.get(ENDPOINT_CHILDREN_WEBENDPOINT_KEY)
+                if webEndpoints:
+                    for webEndpoint in webEndpoints.itervalues():
+                        yield webEndpoint, endpoint
 
 class GeventWebAdapter(WebAdapter):
     """The gevent web adapter
@@ -323,17 +286,13 @@ class GeventWebAdapter(WebAdapter):
         # Super
         super(GeventWebAdapter, self).__init__(name, host, port, **configs)
 
-    @property
-    def started(self):
-        """Tell if this adapter is started or not
-        """
-        return not self.geventWSGIServer is None
-
-    def startAsync(self):
+    def startAsync(self, runtime):
         """Start asynchronously
         """
+        if self._started:
+            raise ValueError('Adapter has already started')
         # Super
-        super(GeventWebAdapter, self).startAsync()
+        super(GeventWebAdapter, self).startAsync(runtime)
         # Start gevent wsgi server
         # Get logger
         serverLogger = logging.getLogger('unifiedrpc.adapter.web.gevent')
@@ -346,16 +305,20 @@ class GeventWebAdapter(WebAdapter):
         geventWSGIServer.start()
         # Good, started
         self.geventWSGIServer = geventWSGIServer
+        self._started = True
+        self._closed = False
         # Log it
         self.logger.info('Gevent WSGI server starts service at %s:%d', self.host, self.port)
 
-    def close(self):
+    def shutdown(self):
         """Close current adapter
         """
-        if not self.geventWSGIServer:
+        if not self._started:
             raise ValueError('Adapter hasn\'t started')
         self.geventWSGIServer.close()
         self.geventWSGIServer = None
+        self._started = False
+        self._closed = True
         # Super
         super(GeventWebAdapter, self).close()
 
@@ -367,3 +330,21 @@ class GeventLogAdapter(pywsgi.LoggingLogAdapter):
         """
         super(GeventLogAdapter, self).write(msg.strip())
 
+class WebServiceAdapterRuntime(ServiceAdapterRuntime):
+    """Web service adapter runtime
+    """
+    def shutdown(self):
+        """Shutdown this service adapter
+        """
+        # Super
+        super(WebServiceAdapterRuntime, self).Shutdown()
+        # Remove endpoint
+        for webEndpoint, endpoint in self.adapter.getEndpointsFromService(serviceRuntime.service):
+            if webEndpoint.id in self.endpoints:
+                del self.endpoints[webEndpoint.id]
+        # Refresh url rules
+        self.urlMapper = Map([ x.getUrlRule() for (x, y) in self.endpoints.itervalues() ])
+        # Remove runtime from adapter
+        with Adapter.GLOCK:
+            if self.serviceRuntime.service.name in self.adapter.runtimes:
+                del self.adapter.runtimes[self.serviceRuntime.service.name]

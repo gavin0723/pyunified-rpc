@@ -9,13 +9,15 @@
 
 """
 
-from unifiedrpc.protocol.endpoint import ExecutionNode
+from unifiedrpc.protocol import Caller
 from unifiedrpc.errors import BadRequestBodyError, ERRCODE_BADREQUEST_LACK_OF_BODY, ERRCODE_BADREQUEST_INVALID_BODY
 
-class DataTypeValidationNode(ExecutionNode):
-    """The data type validation node
+class DataTypeValidationCaller(Caller):
+    """The data type validation caller
     """
     def __init__(self, dataType, notEmpty):
+        """Create a new DataTypeValidationCaller
+        """
         self.dataType = dataType
         self.notEmpty = notEmpty
 
@@ -30,4 +32,3 @@ class DataTypeValidationNode(ExecutionNode):
             raise BadRequestBodyError(ERRCODE_BADREQUEST_INVALID_BODY)
         # Done, run next
         return next()
-

@@ -73,11 +73,14 @@ if __name__ == '__main__':
         """
         args = getArguments()
         # Create the server
-        server = Server(**{ CONFIG_RESPONSE_MIMETYPE: mime.APPLICATION_JSON, CONFIG_RESPONSE_CONTENT_CONTAINER: APIContentContainer })
-        server.addAdapter(GeventWebAdapter('web', args.host, args.port))
-        server.addService(SimpleService())
-        # Done
-        server.start()
+        server = Server([
+            SimpleService()
+            ], **{ CONFIG_RESPONSE_MIMETYPE: mime.APPLICATION_JSON, CONFIG_RESPONSE_CONTENT_CONTAINER: APIContentContainer })
+        # Start
+        try:
+            server.start([ GeventWebAdapter('web', args.host, args.port) ])
+        except KeyboardInterrupt:
+            pass
 
     main()
 

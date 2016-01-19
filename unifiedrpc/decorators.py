@@ -4,15 +4,15 @@
 """The decorators
 """
 
-from protocol.endpoint import Endpoint
+from protocol import Endpoint
 
-def endpoint(**kwargs):
+def endpoint(**configs):
     """The endpoint decorator, used to decorate a endpoint
     The decorated object could be a method, class or any other callable object
     """
     def decorate(callableObject):
         """Decorate the callableObject
         """
-        return Endpoint(callableObject, **kwargs)
+        return Endpoint(callableObject, configs)
+    # Done
     return decorate
-

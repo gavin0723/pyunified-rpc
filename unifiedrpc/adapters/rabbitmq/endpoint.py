@@ -16,14 +16,14 @@ from definition import ENDPOINT_CHILDREN_RABBITMQ_SUBCRIBE_ENDPOINT_KEY
 class SubscribeEndpoint(object):
     """The subscribe endpoint
     Attributes:
-
+        queues                          A list of consumed queues
+        ack                             Require acknowledgement or not
     """
     def __init__(self, *queues, **kwargs):
         """Create a new SubscribeEndpoint
         """
         if not queues:
             raise ValueError('Require at least one queue')
-        self.id = str(uuid4())
         self.queues = queues
         self.ack = kwargs.get('ack', False)
 
@@ -36,21 +36,25 @@ class SubscribeEndpoint(object):
         """
         # Add this web endpoint to the endpoint object
         if ENDPOINT_CHILDREN_RABBITMQ_SUBCRIBE_ENDPOINT_KEY in endpoint.children:
-            endpoint.children[ENDPOINT_CHILDREN_RABBITMQ_SUBCRIBE_ENDPOINT_KEY][self.id] = self
+            endpoint.children[ENDPOINT_CHILDREN_RABBITMQ_SUBCRIBE_ENDPOINT_KEY].append(self)
         else:
-            endpoint.children[ENDPOINT_CHILDREN_RABBITMQ_SUBCRIBE_ENDPOINT_KEY] = { self.id: self }
+            endpoint.children[ENDPOINT_CHILDREN_RABBITMQ_SUBCRIBE_ENDPOINT_KEY] = [ self ]
         # Done
         return endpoint
 
 class AnonymousSubscribeEndpoint(object):
     """The anonymous subscribe endpoint
+    Attributes:
+        bindings                        The binding of this anonymous endpoint, a list of (exchange, routingKey)
+        ack                             Require acknowledgement or not
     """
     def __init__(self, *bindings, **kwargs):
         """Create a new AnonymousSubscribeEndpoint
         Parameters:
             bindings                    A list of tuple (exchange, routingKey)
         """
-        self.id = str(uuid4())
+        if not bindings:
+            raise ValueError('Require at least one binding')
         self.bindings = bindings
         self.ack = kwargs.get('ack', False)
 
@@ -63,9 +67,9 @@ class AnonymousSubscribeEndpoint(object):
         """
         # Add this web endpoint to the endpoint object
         if ENDPOINT_CHILDREN_RABBITMQ_SUBCRIBE_ENDPOINT_KEY in endpoint.children:
-            endpoint.children[ENDPOINT_CHILDREN_RABBITMQ_SUBCRIBE_ENDPOINT_KEY][self.id] = self
+            endpoint.children[ENDPOINT_CHILDREN_RABBITMQ_SUBCRIBE_ENDPOINT_KEY].append(self)
         else:
-            endpoint.children[ENDPOINT_CHILDREN_RABBITMQ_SUBCRIBE_ENDPOINT_KEY] = { self.id: self }
+            endpoint.children[ENDPOINT_CHILDREN_RABBITMQ_SUBCRIBE_ENDPOINT_KEY] = [ self ]
         # Done
         return endpoint
 

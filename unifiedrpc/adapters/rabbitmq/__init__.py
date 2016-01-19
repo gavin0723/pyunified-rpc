@@ -10,11 +10,11 @@
 """
 
 from decorators import subscribe, annonymousSubscribe
-from adapter import GeventRabbitMQAdapter
-from definition import DEFAULT_PUBLISH_CONTENT_TYPE_KEY, DEFAULT_PUBLISH_CONTENT_ENCODING_KEY
+from adapter import GeventRabbitMQSubscriptionAdapter
+from definition import CONFIG_PUBLISH_CONTENT_TYPE, CONFIG_PUBLISH_CONTENT_ENCODING
 
 __all__ = [
     'subscribe', 'annonymousSubscribe',
-    'GeventRabbitMQAdapter',
-    'DEFAULT_PUBLISH_CONTENT_ENCODING_KEY', 'DEFAULT_PUBLISH_CONTENT_TYPE_KEY'
+    'GeventRabbitMQSubscriptionAdapter',
+    'CONFIG_PUBLISH_CONTENT_ENCODING', 'CONFIG_PUBLISH_CONTENT_TYPE'
 ]

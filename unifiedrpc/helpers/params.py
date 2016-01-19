@@ -9,17 +9,21 @@
 
 """
 
+from unifiedrpc.protocol import CONFIG_ENDPOINT_PARAMETER_TYPE
+
 def paramtype(**params):
     """Define the parameter types
     """
     def decorate(endpoint):
         """The method to decorate the endpoint
         """
+        if not CONFIG_ENDPOINT_PARAMETER_TYPE in endpoint.configs:
+            endpoint.configs[CONFIG_ENDPOINT_PARAMETER_TYPE] = {}
+        typeConfigs = endpoint.configs[CONFIG_ENDPOINT_PARAMETER_TYPE]
         # Add the parameters to endpoint
         for name, type in params.iteritems():
-            endpoint.signature.parameter.types[name] = type
+            typeConfigs[name] = type
         # Done
         return endpoint
     # Done
     return decorate
-

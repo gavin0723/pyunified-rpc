@@ -9,14 +9,13 @@
 
 """
 
-from unifiedrpc import context
-from unifiedrpc.protocol.endpoint import ExecutionNode
+from unifiedrpc.protocol import Caller
 
-class SessionValidationNode(ExecutionNode):
-    """The session validation node
+class SessionValidationCaller(Caller):
+    """The session validation caller
     """
     def __init__(self, key, validator, error):
-        """Create a new SessionValidationNode
+        """Create a new SessionValidationCaller
         """
         self.key = key
         self.validator = validator
@@ -43,4 +42,3 @@ class SessionValidationNode(ExecutionNode):
                     raise
         # Done
         return next()
-

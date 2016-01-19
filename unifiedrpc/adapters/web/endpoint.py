@@ -8,7 +8,6 @@ from uuid import uuid4
 
 from werkzeug.routing import Rule
 
-from execnode import ParameterValueSelectionNode
 from definition import ENDPOINT_CHILDREN_WEBENDPOINT_KEY
 
 class WebEndpoint(object):
@@ -60,13 +59,6 @@ class WebEndpoint(object):
             endpoint.children[ENDPOINT_CHILDREN_WEBENDPOINT_KEY][self.id] = self
         else:
             endpoint.children[ENDPOINT_CHILDREN_WEBENDPOINT_KEY] = { self.id: self }
-        # Add execution node
-        shouldAddParamSelection = True
-        for node in endpoint.pipeline.nodes:
-            if isinstance(node, ParameterValueSelectionNode):
-                shouldAddParamSelection = False
-        if shouldAddParamSelection:
-            endpoint.pipeline.add(ParameterValueSelectionNode(), 10000)
         # Done
         return endpoint
 

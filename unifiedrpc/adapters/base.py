@@ -13,38 +13,44 @@ class Adapter(object):
         """Create a new AdapterBase
         """
         self.name = name
-        self.server = None
         self.configs = configs
+        self._started = False
+        self._closed = True
 
     @property
     def started(self):
-        """Tell if this adapter is started or not
+        """Get if the adapter is started
+        """
+        return self._started
+
+    @property
+    def closed(self):
+        """Get if the adapter is closed
+        """
+        return self._closed
+
+    def getStatus(self):
+        """Get the adapter status
+        Returns:
+            A json serializable dict
         """
         raise NotImplementedError
 
-    def addService(self, service):
-        """Add a service
-        """
-        raise NotImplementedError
-
-    def removeService(self, service):
-        """Remove a service
-        """
-        raise NotImplementedError
-
-    def cleanServices(self, services):
-        """Clean all service
-        """
-        raise NotImplementedError
-
-    def startAsync(self):
+    def startAsync(self, runtime):
         """Start asynchronously
         """
         raise NotImplementedError
 
-    def close(self):
-        """Close current adapter
+    def shutdown(self):
+        """Shutdown the adapter
         Returns:
             Nothing
+        """
+        raise NotImplementedError
+
+    def attach(self, serviceRuntime):
+        """Attach a service
+        Returns:
+            ServiceAdapterRuntime
         """
         raise NotImplementedError

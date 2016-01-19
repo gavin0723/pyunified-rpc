@@ -11,7 +11,7 @@ class RPCError(Exception):
         """Create a new RPCError
         """
         self.code = code
-        self.reason = reason
+        self.reason = reason or DEFAULT_REASON.get(code)
         self.detail = detail
 
     def __str__(self):
@@ -108,3 +108,13 @@ ERRCODE_BADREQUEST_BODY_NOT_SATISFIED                       = 0x0001012         
 
 ERRCODE_UNAUTHORIZED_INVALID_CREDENTIAL                     = 0x0002001             # The provided credential is invalid
 ERRCODE_UNAUTHORIZED_BLOCKED                                = 0x0002002             # The authentication or authorization is blocked by someone
+
+ERRCODE_NOTACCEPTABLE_NO_SUPPORTED_MIMETYPES                = 0x0003001
+
+ERRCODE_NOTFOUND_ENDPOINT_NOT_FOUND                         = 0x0004001
+
+DEFAULT_REASON = {
+    ERRCODE_UNDEFINED                                       : 'Undefined error',
+    ERRCODE_BADREQUEST_INVALID_PARAMETER_TYPE               : 'Invalid parameter type',
+    ERRCODE_NOTFOUND_ENDPOINT_NOT_FOUND                     : 'Endpoint not found',
+    }

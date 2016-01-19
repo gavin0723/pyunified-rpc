@@ -9,7 +9,7 @@
 
 """
 
-from ..executionnode.content import DataTypeValidationNode
+from unifiedrpc.caller import DataTypeValidationCaller
 
 def requiredata(dataType = dict, notEmpty = True):
     """Require the request data should be a specified type
@@ -17,10 +17,8 @@ def requiredata(dataType = dict, notEmpty = True):
     def decorate(endpoint):
         """The method to decorate the endpoint
         """
-        node = DataTypeValidationNode(dataType, notEmpty)
-        endpoint.pipeline.add(node, 500)
+        endpoint.callers.append((DataTypeValidationCaller(dataType, notEmpty), 500))
         # Done
         return endpoint
     # Done
     return decorate
-

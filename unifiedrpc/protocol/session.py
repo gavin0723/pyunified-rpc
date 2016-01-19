@@ -16,6 +16,11 @@ from unifiedrpc.util import json
 class Session(object):
     """The session
     """
+    def __init__(self):
+        """Create a new Session
+        """
+        self.clean = True           # Should clean the session or not
+
     def __len__(self):
         """Get the key count of session
         """
@@ -121,9 +126,3 @@ class SessionManager(object):
         """Set session object to response object
         """
         raise NotImplementedError
-
-    def clean(self, resposne):
-        """Clean session
-        """
-        raise NotImplementedError
-

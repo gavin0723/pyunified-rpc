@@ -18,8 +18,6 @@ from __version__ import __version__
 
 from definition import *
 from errors import *
-from protocol import Context, context, contextspace
+from protocol import Service, context, contextspace
 from decorators import *
-from service import Service
-from server import Server, GeventServer
-
+from server import Server
