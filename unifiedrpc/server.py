@@ -14,9 +14,9 @@ Known configs:
 import logging
 
 from protocol import Runtime
-from unifiedrpc.content.parser.aggregate import AggregateContentParser
-from unifiedrpc.content.builder.automatic import AutomaticContentBuilder
-from unifiedrpc.content.container.plain import PlainContentContainer
+from unifiedrpc.content.parser import default as createDefaultContentParser
+from unifiedrpc.content.builder import default as createDefaultContentBuilder
+from unifiedrpc.content.container import PlainContentContainer
 
 from definition import *
 from errors import *
@@ -31,8 +31,6 @@ class Server(object):
     DEFAULT_RESPONSE_MIMETYPE       = 'text/plain'
     DEFAULT_RESPONSE_ENCODING       = 'utf-8'
     DEFAULT_CONTENT_CONTAINER       = PlainContentContainer
-    DEFAULT_CONTENT_PARSER          = AggregateContentParser
-    DEFAULT_CONTENT_BUILDER         = AutomaticContentBuilder
 
     def __init__(self, services, **configs):
         """Create a new Server
@@ -47,7 +45,7 @@ class Server(object):
         if not CONFIG_REQUEST_ENCODING in self.configs:
             self.configs[CONFIG_REQUEST_ENCODING] = self.DEFAULT_REQUEST_ENCODING
         if not CONFIG_REQUEST_CONTENT_PARSER in self.configs:
-            self.configs[CONFIG_REQUEST_CONTENT_PARSER] = self.DEFAULT_CONTENT_PARSER.default()
+            self.configs[CONFIG_REQUEST_CONTENT_PARSER] = createDefaultContentParser()
         if not CONFIG_RESPONSE_MIMETYPE in self.configs:
             self.configs[CONFIG_RESPONSE_MIMETYPE] = self.DEFAULT_RESPONSE_MIMETYPE
         if not CONFIG_RESPONSE_ENCODING in self.configs:
@@ -55,7 +53,7 @@ class Server(object):
         if not CONFIG_RESPONSE_CONTENT_CONTAINER in self.configs:
             self.configs[CONFIG_RESPONSE_CONTENT_CONTAINER] = self.DEFAULT_CONTENT_CONTAINER
         if not CONFIG_RESPONSE_CONTENT_BUILDER in self.configs:
-            self.configs[CONFIG_RESPONSE_CONTENT_BUILDER] = self.DEFAULT_CONTENT_BUILDER.default()
+            self.configs[CONFIG_RESPONSE_CONTENT_BUILDER] = createDefaultContentBuilder()
 
     def createRuntime(self, adapters, enabledServices = None, **_configs):
         """Create a new runtime

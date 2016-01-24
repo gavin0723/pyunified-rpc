@@ -132,3 +132,4 @@ class Response(object):
             containerClass = self.DEFAULT_CONTENT_CONTAINER_CLASS
         # Done
         return containerClass()
+

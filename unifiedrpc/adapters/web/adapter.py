@@ -18,7 +18,7 @@ import traceback
 from gevent import pywsgi
 
 from werkzeug.routing import Map
-from werkzeug.exceptions import HTTPException, NotFound
+from werkzeug.exceptions import HTTPException, NotFound, MethodNotAllowed
 from werkzeug.wrappers import Response as WKResponse
 
 from unifiedrpc import context, contextspace, CONFIG_SESSION_MANAGER
@@ -50,6 +50,7 @@ ERROR_BINDINGS = {
     UnauthorizedError:              401,
     ForbiddenError:                 403,
     NotFoundError:                  404,
+    MethodNotAllowedError:          405,
     NotAcceptableError:             406,
     RequestTimeoutError:            408,
     LengthRequiredError:            411,
@@ -205,6 +206,9 @@ class WebAdapter(Adapter):
         except NotFound:
             # Not found
             raise NotFoundError(ERRCODE_NOTFOUND_ENDPOINT_NOT_FOUND)
+        except MethodNotAllowed:
+            # Method not allowed
+            raise MethodNotAllowedError
         # Get the endpoint
         res = self.endpoints.get(webEndpointID)
         if not res:

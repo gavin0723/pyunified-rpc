@@ -27,7 +27,7 @@ class ContentBuilder(object):
         """Apply header response
         """
         for header, value in headers.iteritems():
-            context.headers[header] = value
+            context.response.headers[header] = value
 
     def encodeHeaderValue(self, value):
         """Encode the header value

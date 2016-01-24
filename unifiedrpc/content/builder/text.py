@@ -25,12 +25,10 @@ class TextContentBuilder(ContentBuilder):
 
     def build(self, context):
         """Build the content
-        NOTE:
-            This method should set the context properly
         Parameters:
             context                         The Context object
         Returns:
-            Nothing
+            The build value
         """
         if context.response.container:
             # Good, get the value and headers
@@ -45,3 +43,4 @@ class TextContentBuilder(ContentBuilder):
                 return value.encode(context.response.encoding)
             else:
                 return str(value)
+

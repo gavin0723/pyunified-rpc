@@ -10,12 +10,12 @@
 """
 
 from params import paramtype
-from content import requiredata
+from content import requiredata, container
 from session import requiresession
 
 __all__ = [
         'paramtype',
-        'requiredata',
+        'requiredata', 'container',
         'requiresession',
         ]
 

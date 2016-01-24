@@ -10,6 +10,7 @@
 """
 
 from unifiedrpc.caller import DataTypeValidationCaller
+from unifiedrpc.definition import CONFIG_RESPONSE_CONTENT_CONTAINER
 
 def requiredata(dataType = dict, notEmpty = True):
     """Require the request data should be a specified type
@@ -22,3 +23,16 @@ def requiredata(dataType = dict, notEmpty = True):
         return endpoint
     # Done
     return decorate
+
+def container(containerClass):
+    """Set the container class of the endpoint
+    """
+    def decorate(endpoint):
+        """The method to decorate the endpoint
+        """
+        endpoint.configs[CONFIG_RESPONSE_CONTENT_CONTAINER] = containerClass
+        # Done
+        return endpoint
+    # Done
+    return decorate
+

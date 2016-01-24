@@ -72,6 +72,7 @@ class Runtime(object):
             self._serviceRuntimes = {}
             self._closedEvent.clear()
             # Boot up services
+            self.logger.info('Boot up services')
             for service in self.services.itervalues():
                 self.logger.info('Start service [%s]', service.name)
                 serviceRuntime = service.bootup(self)
@@ -79,6 +80,7 @@ class Runtime(object):
                     raise ValueError('Require service runtime after boot up service [%s]' % service.name)
                 self._serviceRuntimes[service.name] = serviceRuntime
             # Start all adapters
+            self.logger.info('Boot up adapters')
             for adapter in self.adapters.itervalues():
                 self.logger.info('Start adapter [%s]', adapter.name)
                 adapter.startAsync(self)

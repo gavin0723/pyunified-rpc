@@ -63,23 +63,3 @@ class AggregateContentParser(ContentParser):
         # Parse
         return parser.parse(context)
 
-    @classmethod
-    def default(cls):
-        """Create a default AggregateContentParser
-        Returns:
-            AggregateContentParser object
-        """
-        from text import TextContentParser
-        from form import FormContentParser
-        from _json import JsonContentParser
-        # Create the parser
-        textParser = TextContentParser()
-        formParser = FormContentParser()
-        jsonParser = JsonContentParser()
-        # Set the parsers
-        parsers = {}
-        for parser in (textParser, formParser, jsonParser):
-            for mimeType in parser.SUPPORT_MIMETYPES:
-                parsers[mimeType] = parser
-        # Done
-        return AggregateContentParser(parsers)

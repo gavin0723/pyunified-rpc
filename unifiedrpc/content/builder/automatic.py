@@ -49,21 +49,3 @@ class AutomaticContentBuilder(ContentBuilder):
         """
         self.builders[mimeType] = builder
 
-    @classmethod
-    def default(cls):
-        """Create a default AutomaticContentBuilder
-        Returns:
-            AutomaticContentBuilder object
-        """
-        from text import TextContentBuilder
-        from _json import JsonContentBuilder
-        # Create the builder
-        textBuilder = TextContentBuilder()
-        jsonBuilder = JsonContentBuilder()
-        # Add them
-        builders = {}
-        for builder in (textBuilder, jsonBuilder):
-            for mimeType in builder.SUPPORT_MIMETYPES:
-                builders[mimeType] = builder
-        # Done
-        return AutomaticContentBuilder(builders)
