@@ -38,9 +38,10 @@ class JsonContentBuilder(ContentBuilder):
                 self.applyHeaderResponse(headers, context)
             if not context.response.encoding:
                 raise ValueError('Require response encoding')
-            if isinstance(value, (dict, tuple, list)):
+            if value is None:
+                return '{}'
+            elif isinstance(value, (dict, tuple, list)):
                 return json.dumps(value, ensure_ascii = False).encode(context.response.encoding)
             else:
                 raise ValueError('Unsupported response value type [%s]' % type(value).__name__)
-
 

@@ -19,7 +19,8 @@ class BinaryContentBuilder(ContentBuilder):
     """The binary content builder
     """
     SUPPORT_MIMETYPES = [
-        mime.APPLICATION_OCTET_STREAM
+        mime.APPLICATION_OCTET_STREAM,
+        mime.IMAGE_PNG,
         ]
 
     def isSupportMimeType(self, mimeType):
@@ -42,6 +43,9 @@ class BinaryContentBuilder(ContentBuilder):
             if isinstance(value, file):
                 # A file
                 return FileContentWrapper(value)
+            elif isinstance(value, basestring):
+                # A string
+                return (value, )
             else:
                 raise ValueError('No supported value [%s] of type [%s]' % (value, type(value).__name__))
 
