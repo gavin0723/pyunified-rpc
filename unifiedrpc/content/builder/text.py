@@ -41,6 +41,8 @@ class TextContentBuilder(ContentBuilder):
                 if not context.response.encoding:
                     raise ValueError('Require response encoding')
                 return value.encode(context.response.encoding)
+            elif value is None:
+                return ''
             else:
                 return str(value)
 
