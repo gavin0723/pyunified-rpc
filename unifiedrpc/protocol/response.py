@@ -78,7 +78,7 @@ class Response(object):
                         else:
                             mimeType = allowedMimeTypes[0]
                         break
-                    elif context.components.contentBuilder.isSupportMimeType(acceptMimeType):
+                    elif acceptMimeType in allowedMimeTypes and context.components.contentBuilder.isSupportMimeType(acceptMimeType):
                         mimeType = acceptMimeType
                         break
                 if not mimeType:
