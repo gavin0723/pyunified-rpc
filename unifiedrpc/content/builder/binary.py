@@ -12,6 +12,7 @@
 import logging
 
 import mime
+import cStringIO, StringIO
 
 from base import ContentBuilder
 
@@ -40,7 +41,7 @@ class BinaryContentBuilder(ContentBuilder):
             value, headers = context.response.container.dump()
             if headers:
                 self.applyHeaderResponse(headers, context)
-            if isinstance(value, file):
+            if isinstance(value, file) or isinstance(value, StringIO.StringIO) or isinstance(value, cStringIO.InputType):
                 # A file
                 return FileContentWrapper(value)
             elif isinstance(value, basestring):
