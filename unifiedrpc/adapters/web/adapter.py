@@ -28,6 +28,7 @@ from unifiedrpc.errors import *
 from unifiedrpc.definition import CONFIG_REQUEST_ENCODING
 
 from definition import ENDPOINT_CHILDREN_WEBENDPOINT_KEY
+from errors import ERROR_BINDINGS
 from request import WebRequest
 from response import WebResponse
 from caller import ResponseFinalBuildCaller, ParameterValueSelectionCaller
@@ -41,23 +42,6 @@ STAGE_BEFORE_SETVALUE   = 4
 STAGE_BEFORE_FORMATING  = 5
 STAGE_BEFORE_RESPOND    = 6
 STAGE_DONE              = 7
-
-# Bind errors to http status code
-ERROR_BINDINGS = {
-    BadRequestError:                400,
-    BadRequestParameterError:       400,
-    BadRequestBodyError:            400,
-    UnauthorizedError:              401,
-    ForbiddenError:                 403,
-    NotFoundError:                  404,
-    MethodNotAllowedError:          405,
-    NotAcceptableError:             406,
-    RequestTimeoutError:            408,
-    LengthRequiredError:            411,
-    RequestEntityTooLargeError:     413,
-    UnsupportedMediaTypeError:      415,
-    InternalServerError:            500,
-}
 
 class WebAdapter(Adapter):
     """The web adapter

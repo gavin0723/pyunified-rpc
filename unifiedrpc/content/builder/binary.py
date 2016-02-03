@@ -10,9 +10,9 @@
 """
 
 import logging
+import cStringIO, StringIO
 
 import mime
-import cStringIO, StringIO
 
 from base import ContentBuilder
 
@@ -41,17 +41,17 @@ class BinaryContentBuilder(ContentBuilder):
             value, headers = context.response.container.dump()
             if headers:
                 self.applyHeaderResponse(headers, context)
-            if isinstance(value, file) or isinstance(value, StringIO.StringIO) or isinstance(value, cStringIO.InputType):
-                # A file
-                return FileContentWrapper(value)
+            if isinstance(value, (file, StringIO.StringIO, cStringIO.InputType)):
+                # A file like stream object
+                return StreamContentWrapper(value)
             elif isinstance(value, basestring):
                 # A string
                 return (value, )
             else:
                 raise ValueError('No supported value [%s] of type [%s]' % (value, type(value).__name__))
 
-class FileContentWrapper(object):
-    """The file content wrapper
+class StreamContentWrapper(object):
+    """The file like stream object content wrapper
     """
     BLOCK_SIZE  = 4096
 
@@ -75,10 +75,10 @@ class FileContentWrapper(object):
         except EOFError:
             pass
         except:
-            self.logger.exception('Iterate read file error')
+            self.logger.exception('Iterate read stream error')
         finally:
             try:
                 self.fd.close()
             except:
-                self.logger.exception('Failed to close file')
+                self.logger.exception('Failed to close stream')
 
