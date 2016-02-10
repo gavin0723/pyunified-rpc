@@ -15,6 +15,8 @@ from threading import Event, Lock
 
 from unifiedrpc.errors import BadRequestParameterError, ERRCODE_BADREQUEST_UNKNOWN_PARAMETER, ERRCODE_BADREQUEST_LACK_OF_PARAMETER
 
+from probe import ProbeFrame, PROBE_LOCATION_BEFORE_REQUEST, PROBE_LOCATION_AFTER_REQUEST, PROBE_LOCATION_AFTER_RESPONSE
+
 class Runtime(object):
     """Represents a server runtime
     """
@@ -29,6 +31,7 @@ class Runtime(object):
         self.services = services
         self.adapters = adapters
         self.configs = configs
+        self.probe = ProbeFrame()
         # Runtimes
         self._serviceRuntimes = None
         # Create stateful parameters
@@ -96,24 +99,41 @@ class Runtime(object):
         """Shutdown this runtime
         """
         # Shutdown all services
-        for serviceRuntime in self._serviceRuntimes.itervalues():
-            try:
-                self.logger.info('Shutdown service [%s]', serviceRuntime.service.name)
-                serviceRuntime.shutdown()
-            except:
-                self.logger.exception('Failed to shutdown service [%s], skip', serviceRuntime.service.name)
-        # Shutdown all adapters
-        for adapter in self.adapters.itervalues():
-            try:
-                self.logger.info('Shutdown adapter [%s]', adapter.name)
-                adapter.shutdown()
-            except:
-                self.logger.exception('Failed to shutdown adapter [%s], skip', adapter.name)
+        if self._serviceRuntimes:
+            for serviceRuntime in self._serviceRuntimes.itervalues():
+                try:
+                    self.logger.info('Shutdown service [%s]', serviceRuntime.service.name)
+                    serviceRuntime.shutdown()
+                except:
+                    self.logger.exception('Failed to shutdown service [%s], skip', serviceRuntime.service.name)
+            # Shutdown all adapters
+            for adapter in self.adapters.itervalues():
+                try:
+                    self.logger.info('Shutdown adapter [%s]', adapter.name)
+                    adapter.shutdown()
+                except:
+                    self.logger.exception('Failed to shutdown adapter [%s], skip', adapter.name)
         # Done
         self._started = False
         self._closed = True
         self._serviceRuntimes = None
         self._closedEvent.set()
+
+    # The helper methods
+    def invokeBeforeRequest(self, method):
+        """Add a probe before request
+        """
+        self.probe.add(PROBE_LOCATION_BEFORE_REQUEST, method)
+
+    def invokeAfterRequest(self, method):
+        """Add a probe after request
+        """
+        self.probe.add(PROBE_LOCATION_AFTER_REQUEST, method)
+
+    def invokeAfterResponse(self, method):
+        """Add a probe after response
+        """
+        self.probe.add(PROBE_LOCATION_AFTER_RESPONSE, method)
 
 class ServiceRuntime(object):
     """Represents a service runtime
@@ -253,3 +273,4 @@ class Caller(object):
             The returned value
         """
         raise NotImplementedError
+

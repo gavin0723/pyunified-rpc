@@ -89,11 +89,16 @@ class Server(object):
         runtime.startAsync()
         return runtime
 
-    def start(self, adapters, enabledServices = None, **configs):
+    def start(self, adapters, enabledServices = None, runtimeInitializer = None, **configs):
         """Start the server
         Returns:
             Runtime object
         """
         runtime = self.createRuntime(adapters, enabledServices, **configs)
+        # Call initializer
+        if runtimeInitializer:
+            runtimeInitializer(runtime)
+        # Start the runtime
         runtime.start()
         return runtime
+

@@ -22,10 +22,11 @@ from werkzeug.exceptions import HTTPException, NotFound, MethodNotAllowed
 from werkzeug.wrappers import Response as WKResponse
 
 from unifiedrpc import context, contextspace, CONFIG_SESSION_MANAGER
-from unifiedrpc.adapters import Adapter
-from unifiedrpc.protocol.runtime import ServiceAdapterRuntime
 from unifiedrpc.errors import *
+from unifiedrpc.adapters import Adapter
 from unifiedrpc.definition import CONFIG_REQUEST_ENCODING
+from unifiedrpc.protocol import PROBE_LOCATION_BEFORE_REQUEST, PROBE_LOCATION_AFTER_REQUEST, PROBE_LOCATION_AFTER_RESPONSE
+from unifiedrpc.protocol.runtime import ServiceAdapterRuntime
 
 from definition import ENDPOINT_CHILDREN_WEBENDPOINT_KEY
 from errors import ERROR_BINDINGS
@@ -94,6 +95,8 @@ class WebAdapter(Adapter):
         with contextspace(self.runtime, self):
             try:
                 stage = STAGE_BEFORE_REQUEST
+                # Call the probe before request
+                self.runtime.probe.run(PROBE_LOCATION_BEFORE_REQUEST)
                 # Parse the rqequest
                 context.request = self.REQUEST_CLASS(environ)
                 # Parse the request content stream if have one
@@ -112,8 +115,11 @@ class WebAdapter(Adapter):
                 context.endpoint = endpoint
                 context.params = params
                 context.webEndpoint = webEndpoint
-                # Create the response object
+                # Complete the request
                 stage = STAGE_BEFORE_RESPONSE
+                # Call the probe after request
+                self.runtime.probe.run(PROBE_LOCATION_AFTER_REQUEST)
+                # Create the response object
                 context.response = self.RESPONSE_CLASS()
                 # Invoke the endpoint
                 stage = STAGE_BEFORE_HANDLER
@@ -121,8 +127,12 @@ class WebAdapter(Adapter):
                     (ResponseFinalBuildCaller(), 10000),
                     (ParameterValueSelectionCaller(), 20000),
                     ])
-                return response(environ, startResponse)
+                rtnValue = response(environ, startResponse)
+                # Call the probe after response
+                self.runtime.probe.run(PROBE_LOCATION_AFTER_RESPONSE)
                 # Done
+                return rtnValue
+                # -*- -------------------------------------------------- -*-
             except Exception as error:
                 # Error happened
                 # Check error type
@@ -144,7 +154,11 @@ class WebAdapter(Adapter):
                     except:
                         # Failed to initialize the response, will use the default response
                         self.logger.exception('Failed to initialize the response when handling error')
-                        return WKResponse(status = status)(environ, startResponse)
+                        rtnValue = WKResponse(status = status)(environ, startResponse)
+                        # Call the probe after response
+                        self.runtime.probe.run(PROBE_LOCATION_AFTER_RESPONSE)
+                        # Done
+                        return rtnValue
                 else:
                     # Set the response status
                     context.response.status_code = status
@@ -154,26 +168,42 @@ class WebAdapter(Adapter):
                 except:
                     # Failed to set error to container
                     self.logger.exception('Failed to set error to container when handling error')
-                    return WKResponse(status = status)(environ, startResponse)
+                    rtnValue = WKResponse(status = status)(environ, startResponse)
+                    # Call the probe after response
+                    self.runtime.probe.run(PROBE_LOCATION_AFTER_RESPONSE)
+                    # Done
+                    return rtnValue
                 # Format value
                 try:
                     context.response.content = context.components.contentBuilder.build(context)
                 except:
                     # Failed to build content
                     self.logger.exception('Failed to build content when handling error')
-                    return WKResponse(status = status)(environ, startResponse)
+                    rtnValue = WKResponse(status = status)(environ, startResponse)
+                    # Call the probe after response
+                    self.runtime.probe.run(PROBE_LOCATION_AFTER_RESPONSE)
+                    # Done
+                    return rtnValue
                 # Return the response
                 try:
-                    return WKResponse(
+                    rtnValue = WKResponse(
                         status = status,
                         headers = context.response.headers,
                         response = (context.response.content, ) if isinstance(context.response.content, basestring) else context.response.content,
                         content_type = getContentType(context.response.mimeType, context.response.encoding)
                         )(environ, startResponse)
+                    # Call the probe after response
+                    self.runtime.probe.run(PROBE_LOCATION_AFTER_RESPONSE)
+                    # Done
+                    return rtnValue
                 except:
                     # Failed to respond
                     self.logger.exception('Failed to respond when handling error')
-                    return WKResponse(status = status)(environ, startResponse)
+                    rtnValue = WKResponse(status = status)(environ, startResponse)
+                    # Call the probe after response
+                    self.runtime.probe.run(PROBE_LOCATION_AFTER_RESPONSE)
+                    # Done
+                    return rtnValue
 
     def dispatch(self):
         """Dispatch the request for current context
