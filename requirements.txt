@@ -1,4 +1,4 @@
 Werkzeug
 pymime
 haigha
-gevent==1.1rc2
+gevent==1.1rc4

@@ -1,0 +1,31 @@
+build:
+    test:
+        image: dockerdist.bdmd.com/cloudbase:latest
+        commands:
+            - ./test.sh
+    build:
+        image: dockerdist.bdmd.com/cloudbase:latest
+        commands:
+            - ./build.sh
+        when:
+            event: push
+            repo: lipixun/pyunified-rpc 
+deploy:
+    rsync:
+        user: ol_unifiedrpc
+        host: openlight-buildrepo.bdmd.com
+        port: 22
+        source: dist/
+        target: ~/$$COMMIT
+        delete: true
+        recursive: true
+        when:
+            event: push
+            repo: lipixun/pyunified-rpc
+notify:
+    webhook:
+        method: POST
+        urls:
+            - https://openlight.bdmd.com/v1/build/hook
+        headers:
+            X-Project-ID: unifiedrpc

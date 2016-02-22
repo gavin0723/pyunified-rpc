@@ -14,7 +14,7 @@
 
 """
 
-from __version__ import __version__
+from __version__ import __version__, setVersion
 
 from definition import *
 from errors import *

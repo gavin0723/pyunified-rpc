@@ -13,32 +13,29 @@ import sys
 reload(sys)
 sys.setdefaultencoding('utf8')
 
+from datetime import datetime
+
 import unifiedrpc
 
 from setuptools import setup, find_packages
 
 requirements = [ x.strip() for x in open('requirements.txt').readlines() ]
 
+# Fix up the version
+version = unifiedrpc.__version__
+if len(version.split('.')) < 3:
+    version = '%s.%s' % (version, datetime.now().strftime('%s'))
+    unifiedrpc.setVersion(version)
+
 setup(
     name = 'unifiedrpc',
-    version = unifiedrpc.__version__,
+    version = version,
     author = 'lipixun',
     author_email = 'lipixun@outlook.com',
     url = 'https://github.com/lipixun/pyunified-rpc',
     packages = find_packages(),
     install_requires = requirements,
-    license = 'LICENSE',
     description = 'The unified RPC framework',
     long_description = open('README.md').read(),
-    keywords = [ 'python', 'rpc', 'web', 'restful' ],
-    classifiers = [
-        'Development Status :: 5 - Production/Stable',
-        'Intended Audience :: Developers',
-        'Operating System :: POSIX',
-        'Topic :: Software Development :: Libraries',
-        'Topic :: Software Development :: Libraries :: Python Modules',
-        'Programming Language :: Python',
-        'Programming Language :: Python :: 2.7',
-    ]
 )
 
