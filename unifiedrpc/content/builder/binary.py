@@ -47,6 +47,8 @@ class BinaryContentBuilder(ContentBuilder):
             elif isinstance(value, basestring):
                 # A string
                 return (value, )
+            elif value is None:
+                return ('', )
             else:
                 raise ValueError('No supported value [%s] of type [%s]' % (value, type(value).__name__))
 
