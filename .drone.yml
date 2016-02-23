@@ -30,7 +30,8 @@ notify:
         method: POST
         urls:
             - http://openlight-api.bdmd.com/v1/build/hook
-        headers:
+        content_type: application/json
+        header:
             X-Project-ID: unifiedrpc
         when:
             success: true
