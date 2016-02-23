@@ -26,6 +26,7 @@ deploy:
             repo: lipixun/pyunified-rpc
 notify:
     webhook:
+        debug: true
         method: POST
         urls:
             - http://openlight-api.bdmd.com/v1/build/hook
