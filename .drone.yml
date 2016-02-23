@@ -1,10 +1,12 @@
 build:
     test:
         image: dockerdist.bdmd.com/cloudbase:latest
+        pull: true
         commands:
             - ./test.sh
     build:
         image: dockerdist.bdmd.com/cloudbase:latest
+        pull: true
         commands:
             - ./build.sh
         when:
