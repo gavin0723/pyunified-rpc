@@ -32,7 +32,7 @@ notify:
             - http://openlight-api.bdmd.com/v1/build/hook
         content_type: application/json
         header:
-            X-Project-ID: unifiedrpc
+            X-Project-ID: pyunifiedrpc
         when:
             success: true
             event: push
