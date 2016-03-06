@@ -14,7 +14,7 @@ build:
             repo: lipixun/pyunified-rpc 
 deploy:
     rsync:
-        user: ol_unifiedrpc
+        user: ol_pyunifiedrpc
         host: openlight-buildrepo.bdmd.com
         port: 2222
         source: dist/
