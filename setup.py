@@ -34,6 +34,10 @@ setup(
     author_email = 'lipixun@outlook.com',
     url = 'https://github.com/lipixun/pyunified-rpc',
     packages = find_packages(),
+    package_data = {
+        'unifiedrpc': [
+            'VERSION'
+        ] },
     install_requires = requirements,
     description = 'The unified RPC framework',
     long_description = open('README.md').read(),
