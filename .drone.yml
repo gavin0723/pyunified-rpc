@@ -3,12 +3,12 @@ build:
         image: dockerdist.bdmd.com/cloudbase:latest
         pull: true
         commands:
-            - ./test.sh
+            - wget http://openlight-buildrepo.bdmd.com/v1/build/buildscript -O olbuilder.py && python olbuilder.py test
     build:
         image: dockerdist.bdmd.com/cloudbase:latest
         pull: true
         commands:
-            - ./build.sh
+            - wget http://openlight-buildrepo.bdmd.com/v1/build/buildscript -O olbuilder.py && python olbuilder.py build
         when:
             event: push
             repo: lipixun/pyunified-rpc 
@@ -17,8 +17,8 @@ deploy:
         user: ol_pyunifiedrpc
         host: openlight-buildrepo.bdmd.com
         port: 2222
-        source: dist/
-        target: ~/$$COMMIT
+        source: ol_*
+        target: ~/$$BUILD_NUMBER
         delete: true
         recursive: true
         when:
@@ -28,11 +28,8 @@ notify:
     webhook:
         method: POST
         urls:
-            - http://openlight-api.bdmd.com/v1/build/hook
+            - http://openlight-buildrepo.bdmd.com/v1/build/drone/hook
         content_type: application/json
-        header:
-            X-Project-ID: pyunifiedrpc
         when:
-            success: true
             event: push
             repo: lipixun/pyunified-rpc

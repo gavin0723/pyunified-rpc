@@ -14,10 +14,14 @@
 
 """
 
-from __version__ import __version__, setVersion
+try:
+    from __version__ import __version__
+except ImportError:
+    __version__ = 'undetermined'
 
 from definition import *
 from errors import *
-from protocol import Service, context, contextspace
+from protocol import Service, Endpoint, context, contextspace
 from decorators import *
 from server import Server
+

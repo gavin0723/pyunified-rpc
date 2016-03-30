@@ -4,6 +4,8 @@
 """The text content builder
 """
 
+import types
+
 import mime
 
 from base import ContentBuilder
@@ -43,6 +45,37 @@ class TextContentBuilder(ContentBuilder):
                 return value.encode(context.response.encoding)
             elif value is None:
                 return ''
+            elif isinstance(value, types.GeneratorType):
+                return StreamTextContentWrapper(value, context.response.encoding)
             else:
                 return str(value)
+
+class StreamTextContentWrapper(object):
+    """The stream text content wrapper
+    """
+    def __init__(self, iterator, encoding):
+        """Create a new StreamTextContentWrapper
+        """
+        self.iterator = iterator
+        self.encoding = encoding
+        # We have to call next once in order to let the endpoint handler execute
+        self._firstValue = self.iterator.next()
+
+    def __iter__(self):
+        """Iterate content
+        """
+        yield self._firstValue
+        # Continue yield
+        for content in self.iterator:
+            # Check the content type
+            if isinstance(content, str):
+                yield content
+            elif isinstance(value, unicode):
+                if not self.encoding:
+                    raise ValueError('Require response encoding')
+                yield content.encode(self.encoding)
+            elif content is None:
+                yield ''
+            else:
+                yield str(content)
 

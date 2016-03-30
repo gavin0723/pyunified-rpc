@@ -17,12 +17,12 @@ class RPCError(Exception):
     def __str__(self):
         """Convert to string
         """
-        return '%s: #%s - [%s] - [%s]' % (type(self).__name__, self.code or '', self.reason or '', self.detail or '')
+        return '#%s - [%s] - [%s]' % (self.code or '', self.reason or '', self.detail or '')
 
     def __repr__(self):
         """Repr
         """
-        return str(self)
+        return '%s(%s)' % (type(self).__name__ ,self)
 
 class BadRequestError(RPCError):
     """The bad request error
@@ -41,7 +41,7 @@ class BadRequestParameterError(BadRequestError):
     def __str__(self):
         """Convert to string
         """
-        return '%s: #%s - [%s] - [%s] - [%s]' % (type(self).__name__, self.code or '', self.parameter, self.reason or '', self.detail or '')
+        return '#%s - [%s] - [%s] - [%s]' % (self.code or '', self.parameter, self.reason or '', self.detail or '')
 
 class BadRequestBodyError(BadRequestError):
     """The bad request body error
@@ -96,7 +96,7 @@ class UnsupportedMediaTypeError(RPCError):
     def __str__(self):
         """Convert to string
         """
-        return '%s: #%s - [%s] - [%s] - [%s]' % (type(self).__name__, self.code or '', self.mimeType, self.reason or '', self.detail or '')
+        return '#%s - [%s] - [%s] - [%s]' % (self.code or '', self.mimeType, self.reason or '', self.detail or '')
 
 class InternalServerError(RPCError):
     """The internal server error

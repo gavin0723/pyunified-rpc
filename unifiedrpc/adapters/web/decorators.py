@@ -4,7 +4,7 @@
 """the web adapter decorators
 """
 
-from definition import HTTP_METHOD_GET, HTTP_METHOD_POST, HTTP_METHOD_PUT, HTTP_METHOD_DELETE, HTTP_METHOD_HEAD, HTTP_METHOD_OPTIONS
+from definition import HTTP_METHOD_GET, HTTP_METHOD_POST, HTTP_METHOD_PUT, HTTP_METHOD_PATCH, HTTP_METHOD_DELETE, HTTP_METHOD_HEAD, HTTP_METHOD_OPTIONS
 
 from endpoint import WebEndpoint
 
@@ -24,6 +24,11 @@ def put(path, **kwargs):
     """The web put endpoint
     """
     return webEndpoint(path, method = HTTP_METHOD_PUT, **kwargs)
+
+def patch(path, **kwargs):
+    """The web patch endpoint
+    """
+    return webEndpoint(path, method = HTTP_METHOD_PATCH, **kwargs)
 
 def delete(path, **kwargs):
     """The web delete endpoint

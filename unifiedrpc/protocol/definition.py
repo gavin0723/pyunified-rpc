@@ -21,12 +21,15 @@ class Service(object):
     Attributes:
         name                    The unique service name
     """
-    def __init__(self, name):
+    def __init__(self, name, endpoints = None):
         """Create a new Service
         """
         self.name = name
         # Create the active endpoints
         self._activeEndpoints = {}      # Key is name, value is ActiveEndpoint object
+        if endpoints:
+            self._activeEndpoints.update(map(lambda (k, v): (k, v.active()), endpoints.iteritems()))
+        # Get from attributes
         for name in dir(self):
             value = getattr(self, name)
             if isinstance(value, Endpoint):

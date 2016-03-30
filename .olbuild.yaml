@@ -1,0 +1,5 @@
+artifacts:
+    unifiedrpc:
+        path: .
+        package: unifiedrpc
+        mode: pip
