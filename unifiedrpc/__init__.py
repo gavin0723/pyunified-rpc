@@ -19,9 +19,8 @@ try:
 except ImportError:
     __version__ = 'undetermined'
 
-from definition import *
 from errors import *
-from protocol import Service, Endpoint, context, contextspace
-from decorators import *
 from server import Server
-
+from protocol import Service, context
+from decorators import *
+from definition import *

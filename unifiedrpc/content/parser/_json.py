@@ -9,7 +9,7 @@ import logging
 import mime
 
 from unifiedrpc.util import json, JSONDecodeError
-from unifiedrpc.errors import BadRequestBodyError
+from unifiedrpc.errors import BadRequestError
 
 from base import ContentParser
 
@@ -30,4 +30,5 @@ class JsonContentParser(ContentParser):
         except JSONDecodeError:
             # Failed to decode the content
             self.logger.error('Failed to decode request content')
-            raise BadRequestBodyError
+            # Raise
+            raise BadRequestError

@@ -13,16 +13,15 @@ def default():
     """Get the default builder
     """
     # Create the builders
-    textBuilder = TextContentBuilder()
-    jsonBuilder = JsonContentBuilder()
-    binaryBuilder = BinaryContentBuilder()
-    # Add them
     builders = {}
-    for builder in (textBuilder, jsonBuilder, binaryBuilder):
+    for builder in (
+        TextContentBuilder(),
+        JsonContentBuilder(),
+        BinaryContentBuilder()
+        ):
         for mimeType in builder.SUPPORT_MIMETYPES:
             builders[mimeType] = builder
     # Done
     return AutomaticContentBuilder(builders)
 
 __all__ = [ 'default' ]
-

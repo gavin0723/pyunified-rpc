@@ -81,7 +81,7 @@ class Runtime(object):
                 serviceRuntime = service.bootup(self)
                 if not serviceRuntime:
                     raise ValueError('Require service runtime after boot up service [%s]' % service.name)
-                self._serviceRuntimes[service.name] = serviceRuntime
+                self._serviceRuntimes[service.id] = serviceRuntime
             # Start all adapters
             self.logger.info('Boot up adapters')
             for adapter in self.adapters.itervalues():
@@ -232,45 +232,3 @@ class ActiveEndpoint(object):
                     raise BadRequestParameterError(param, ERRCODE_BADREQUEST_LACK_OF_PARAMETER, 'Missing necessary parameter [%s] via current endpoint' % param)
         # Call the endpoint
         return self.endpoint(**params)
-
-class CallStack(object):
-    """The CallStack
-    """
-    def __init__(self, callers, final, context):
-        """Create a new CallStack
-        """
-        # A list of tuple (Caller, weight), the highest weight, the high priority (Which means will execute first)
-        self.callers = [ x for (x, w) in sorted(callers, key = lambda (x, y): y, reverse = True) ]
-        self.final = final
-        self.context = context
-        self.index = -1
-
-    def __call__(self):
-        """Run the pipeline
-        Parameters:
-            context                     The Context object
-        Returns:
-            The returned value
-        """
-        self.index += 1
-        if self.index >= len(self.callers):
-            # All callers has been called
-            return self.final(self.context)
-        else:
-            return self.callers[self.index](self.context, self)
-
-class Caller(object):
-    """The caller
-    Attributes:
-        allowedAdapterTypes             The alloed adapter types, a list of adapter type names, None means all kind of adapters
-    """
-    def __call__(self, context, next):
-        """Run the node logic
-        Parameters:
-            context                     The Context object
-            next                        The next method to continue processing, this method has no parameter
-        Returns:
-            The returned value
-        """
-        raise NotImplementedError
-

@@ -4,5 +4,4 @@
 """The RPC framework adapters
 """
 
-from base import *
-
+from base import Adapter

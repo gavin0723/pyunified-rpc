@@ -9,7 +9,7 @@
 
 """
 
-from unifiedrpc.caller import DataTypeValidationCaller
+from unifiedrpc.stages import DataValidator
 from unifiedrpc.definition import CONFIG_RESPONSE_CONTENT_CONTAINER, CONFIG_RESPONSE_MIMETYPE, CONFIG_RESPONSE_ENCODING
 
 def requiredata(dataType = dict, notEmpty = True):
@@ -18,7 +18,7 @@ def requiredata(dataType = dict, notEmpty = True):
     def decorate(endpoint):
         """The method to decorate the endpoint
         """
-        endpoint.callers.append((DataTypeValidationCaller(dataType, notEmpty), 500))
+        endpoint._stage.addPreRequest(DataValidator(dataType, notEmpty), 500)
         # Done
         return endpoint
     # Done
@@ -30,7 +30,7 @@ def container(containerClass):
     def decorate(endpoint):
         """The method to decorate the endpoint
         """
-        endpoint.configs[CONFIG_RESPONSE_CONTENT_CONTAINER] = containerClass
+        endpoint.setConfig(CONFIG_RESPONSE_CONTENT_CONTAINER, containerClass)
         # Done
         return endpoint
     # Done
@@ -44,7 +44,7 @@ def mimetype(mimetype):
     def decorate(endpoint):
         """The method to decorate the endpoint
         """
-        endpoint.configs[CONFIG_RESPONSE_MIMETYPE] = mimetype
+        endpoint.setConfig(CONFIG_RESPONSE_MIMETYPE, mimetype)
         # Done
         return endpoint
     # Done
@@ -56,10 +56,8 @@ def encoding(encoding):
     def decorate(endpoint):
         """The method to decorate endpoint
         """
-        endpoint.configs[CONFIG_RESPONSE_ENCODING] = encoding
+        endpoint.setConfig(CONFIG_RESPONSE_ENCODING, encoding)
         # Done
         return endpoint
     # Done
     return decorate
-
-

@@ -1,37 +1,47 @@
-# enocding=utf8
+# encoding=utf8
 # The Unified RPC Framework Protocol
 
-"""The Unified RPC Framework Protocol
+""" The Unified RPC Framework Protocol
+    Author: lipixun
+    Created Time : 四  4/ 7 14:52:32 2016
+
+    File Name: __init__.py
+    Description:
+
 """
 
-from threading import local
-from contextlib import contextmanager
-
-from werkzeug.local import LocalProxy
-
+from context import context, Context
 from request import Request
-from response import Response
-from context import Context
+from handler import Handler, StartupHandler, ShutdownHandler
+from service import Service
 from session import Session, DictSession, SessionManager
-from probe import PROBE_LOCATION_BEFORE_REQUEST, PROBE_LOCATION_AFTER_REQUEST, PROBE_LOCATION_AFTER_RESPONSE
-
+from endpoint import Endpoint
+from response import Response
+from execution import createResponseResult
 from definition import *
-from runtime import Runtime, Caller
 
-_context = local()
-context = LocalProxy(lambda: _context.context if hasattr(_context, 'context') else None)
-
-@contextmanager
-def contextspace(runtime, adapter):
-    """The context space
+def startup(*types):
+    """The startup handler decorator
     """
-    _context.context = Context(runtime, adapter)
-    yield
-    _context.context = None
+    def decorator(method):
+        """The decorator
+        """
+        return StartupHandler(types, method)
+    # Done
+    return decorator
+
+def shutdown(*types):
+    """The shutdown handler decorator
+    """
+    def decorator(method):
+        """The decorator
+        """
+        return ShutdownHandler(types, method)
+    # Done
+    return decorator
 
 __all__ = [
-    'context', 'contextspace',
-    'Runtime', 'Caller',
+    'context',
     'Endpoint', 'Request', 'Response', 'Context',
     'Session', 'DictSession', 'SessionManager'
     ]

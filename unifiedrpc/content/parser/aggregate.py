@@ -44,6 +44,11 @@ class AggregateContentParser(ContentParser):
         """
         self.parsers[mimeType.lower()] = parser
 
+    def isSupportMimeType(self, mimeType):
+        """Check if the current content parser could support the specified mimeType
+        """
+        return mimeType.lower() in self.parsers
+
     def get(self, mimeType, default = None):
         """Try to get a parser
         Parameters:
@@ -62,4 +67,3 @@ class AggregateContentParser(ContentParser):
             raise UnsupportedMediaTypeError(context.request.content.mimeType)
         # Parse
         return parser.parse(context)
-

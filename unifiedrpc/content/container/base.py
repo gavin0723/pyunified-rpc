@@ -14,6 +14,8 @@ class ContentContainer(object):
 
     def setValue(self, value):
         """Set the value
+        Parameters:
+            value                   The EndpointExecutionResult object
         """
         raise NotImplementedError
 
@@ -26,6 +28,11 @@ class ContentContainer(object):
         """Get the error
         """
         raise NotImplementedError
+
+    def setRPCError(self, error):
+        """Set the rpc error
+        """
+        self.setError(error.code, error.reason, error.detail)
 
     def setError(self, code, reason, detail = None):
         """Set the error
@@ -60,6 +67,6 @@ class ContentContainer(object):
     def dump(self):
         """Dump the content of this container
         Returns:
-            A tuple (value object, header dict which key is string value is an object)
+            A tuple (an iterable object, header dict which key is string value is an object)
         """
         raise NotImplementedError

@@ -6,7 +6,7 @@
 
 from collections import namedtuple
 
-from unifiedrpc import CONFIG_RESPONSE_ENCODING
+from unifiedrpc.definition import CONFIG_RESPONSE_ENCODING
 
 class Request(object):
     """The request class
@@ -17,8 +17,6 @@ class Request(object):
         content                         The request content, RequestContent object
         accept                          The accept content, AcceptContent object
     """
-    DEFAULT_RESPONSE_ENCODING   = 'utf-8'
-
     def __init__(self, headers = None, params = None, content = None, accept = None):
         """Create a new Request object
         """
@@ -26,6 +24,27 @@ class Request(object):
         self.params = params
         self.content = content
         self.accept = accept
+
+class RequestContent(object):
+    """The body of the request
+    Attributes:
+        mimeType                        The request content mimeType
+        encoding                        The request content encoding
+        length                          The request content length
+        stream                          The request stream
+        data                            The parsed data
+    """
+    DEFAULT_ENCODING = 'utf8'
+
+    def __init__(self, mimeType = None, encoding = None, length = None, params = None, stream = None, data = None):
+        """Create a new RequestContent
+        """
+        self.mimeType = mimeType
+        self.encoding = encoding or self.DEFAULT_ENCODING
+        self.length = length
+        self.params = params
+        self.stream = stream
+        self.data = data
 
     def getDefinedEncoding(self, context):
         """Get the defined request encoding
@@ -37,25 +56,6 @@ class Request(object):
             encoding = self.DEFAULT_RESPONSE_ENCODING
         # Done
         return encoding
-
-class RequestContent(object):
-    """The body of the request
-    Attributes:
-        mimeType                        The request content mimeType
-        encoding                        The request content encoding
-        length                          The request content length
-        stream                          The request stream
-        data                            The parsed data
-    """
-    def __init__(self, mimeType = None, encoding = None, length = None, params = None, stream = None, data = None):
-        """Create a new RequestContent
-        """
-        self.mimeType = mimeType
-        self.encoding = encoding
-        self.length = length
-        self.params = params
-        self.stream = stream
-        self.data = data
 
 class AcceptContent(object):
     """The accept content of the request

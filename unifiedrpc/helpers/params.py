@@ -17,9 +17,9 @@ def paramtype(**params):
     def decorate(endpoint):
         """The method to decorate the endpoint
         """
-        if not CONFIG_ENDPOINT_PARAMETER_TYPE in endpoint.configs:
-            endpoint.configs[CONFIG_ENDPOINT_PARAMETER_TYPE] = {}
-        typeConfigs = endpoint.configs[CONFIG_ENDPOINT_PARAMETER_TYPE]
+        if not CONFIG_ENDPOINT_PARAMETER_TYPE in endpoint._configs:
+            endpoint._configs[CONFIG_ENDPOINT_PARAMETER_TYPE] = {}
+        typeConfigs = endpoint._configs[CONFIG_ENDPOINT_PARAMETER_TYPE]
         # Add the parameters to endpoint
         for name, type in params.iteritems():
             typeConfigs[name] = type

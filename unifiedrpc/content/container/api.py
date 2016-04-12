@@ -1,7 +1,22 @@
 # encoding=utf8
 # The API content container
 
-"""The API content container
+""" The API content container
+    Author: lipixun
+    Created Time : 四  4/ 7 14:52:32 2016
+
+    File Name: api.py
+    Description:
+
+        The result format:
+        {
+            value:
+            error:
+        }
+
+        If the return value is empty, then value = None
+        If the return value is a single value, then value = value
+        If the return value is not a single value, then value = list of value
 """
 
 from base import ContentContainer
@@ -26,6 +41,15 @@ class APIContentContainer(ContentContainer):
     def setValue(self, value):
         """Set the value
         """
+        if value.isSingle:
+            value = list(value)
+            if len(value) == 0:
+                value = None
+            else:
+                value = value[0]
+        else:
+            value = list(value)
+        # Set to json dict
         self._object[self.KEY_VALUE] = value
 
     def cleanValue(self):
@@ -79,5 +103,4 @@ class APIContentContainer(ContentContainer):
         Returns:
             A tuple (value object, header dict which key is string value is an object)
         """
-        return (self._object, None)
-
+        return ((self._object, ), None)

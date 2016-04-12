@@ -9,20 +9,20 @@
 
 """
 
-from unifiedrpc.protocol import Caller
+from unifiedrpc import context
 from unifiedrpc.errors import BadRequestBodyError, ERRCODE_BADREQUEST_LACK_OF_BODY, ERRCODE_BADREQUEST_INVALID_BODY
 
-class DataTypeValidationCaller(Caller):
-    """The data type validation caller
+class DataValidator(object):
+    """The data validator
     """
     def __init__(self, dataType, notEmpty):
-        """Create a new DataTypeValidationCaller
+        """Create a new DataValidator
         """
         self.dataType = dataType
         self.notEmpty = notEmpty
 
-    def __call__(self, context, next):
-        """Run the data validation
+    def __call__(self):
+        """Validate the request data
         """
         if not context.request.content:
             raise BadRequestBodyError(ERRCODE_BADREQUEST_LACK_OF_BODY)
@@ -30,5 +30,3 @@ class DataTypeValidationCaller(Caller):
             raise BadRequestBodyError(ERRCODE_BADREQUEST_INVALID_BODY)
         if self.notEmpty and not context.request.content.data:
             raise BadRequestBodyError(ERRCODE_BADREQUEST_INVALID_BODY)
-        # Done, run next
-        return next()

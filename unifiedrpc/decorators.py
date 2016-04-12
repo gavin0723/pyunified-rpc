@@ -10,9 +10,9 @@ def endpoint(**configs):
     """The endpoint decorator, used to decorate a endpoint
     The decorated object could be a method, class or any other callable object
     """
-    def decorate(callableObject):
-        """Decorate the callableObject
+    def decorate(executor):
+        """Decorate the endpoint
         """
-        return Endpoint(callableObject, configs)
+        return Endpoint(executor, configs)
     # Done
     return decorate

@@ -4,9 +4,13 @@
 """The form content parser
 """
 
+import logging
+
 import mime
 
 from werkzeug.formparser import parse_form_data
+
+from unifiedrpc.errors import BadRequestError
 
 from base import ContentParser
 
@@ -18,11 +22,19 @@ class FormContentParser(ContentParser):
         mime.MULTIPART_FORM_DATA
     ]
 
+    logger = logging.getLogger('unifiedrpc.content.parser.form')
+
     def parse(self, context):
         """Parse the request content
         """
-        stream, form, files = parse_form_data(context.request.environ)
-        return FormData(form, stream, files)
+        try:
+            stream, form, files = parse_form_data(context.request.environ)
+            return FormData(form, stream, files)
+        except:
+            # Failed to decode the content
+            self.logger.error('Failed to decode request content')
+            # Raise
+            raise BadRequestError
 
 class FormData(dict):
     """The form data object

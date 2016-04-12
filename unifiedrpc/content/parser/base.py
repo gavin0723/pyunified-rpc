@@ -10,6 +10,7 @@ class ContentParser(object):
     def isSupportMimeType(self, mimeType):
         """Check if the current content parser could support the specified mimeType
         """
+        return mimeType.lower() in self.SUPPORT_MIMETYPES
 
     def parse(self, request):
         """Parse the body from stream
@@ -20,4 +21,3 @@ class ContentParser(object):
             The parsed content
         """
         raise NotImplementedError
-

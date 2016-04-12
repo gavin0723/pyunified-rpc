@@ -17,19 +17,7 @@ class XmlContentBuilder(ContentBuilder):
         mime.APPLICATION_XML,
     ]
 
-    def isSupportMimeType(self, mimeType):
-        """Check if the current content builder could support the specified mimeType
-        """
-        return mimeType.lower() in self.SUPPORT_MIMETYPES
-
-    def build(self, context):
+    def build(self, response, values):
         """Build the content
-        NOTE:
-            This method should set the context properly
-        Parameters:
-            context                         The Context object
-        Returns:
-            Nothing
         """
         raise NotImplementedError
-

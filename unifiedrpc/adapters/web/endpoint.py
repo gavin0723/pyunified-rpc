@@ -33,11 +33,10 @@ class WebEndpoint(object):
             subdomain = None,
             cookieSecret = None,
             allowedMultiParams = None,
-            **configs
+            configs = None
             ):
         """Create a new WebEndpoint
         """
-        self.id = str(uuid4())
         self.path = path
         self.name = name
         self.method = method
@@ -45,7 +44,7 @@ class WebEndpoint(object):
         self.subdomain = subdomain
         self.cookieSecret = cookieSecret
         self.allowedMultiParams = allowedMultiParams
-        self.configs = configs
+        self._configs = configs or {}
 
     def __call__(self, endpoint):
         """Attach to endpoint object
@@ -55,14 +54,14 @@ class WebEndpoint(object):
             The protocol.Endpoint object
         """
         # Add this web endpoint to the endpoint object
-        if ENDPOINT_CHILDREN_WEBENDPOINT_KEY in endpoint.children:
-            endpoint.children[ENDPOINT_CHILDREN_WEBENDPOINT_KEY][self.id] = self
+        if not ENDPOINT_CHILDREN_WEBENDPOINT_KEY in endpoint.children:
+            endpoint.children[ENDPOINT_CHILDREN_WEBENDPOINT_KEY] = [ self ]
         else:
-            endpoint.children[ENDPOINT_CHILDREN_WEBENDPOINT_KEY] = { self.id: self }
+            endpoint.children[ENDPOINT_CHILDREN_WEBENDPOINT_KEY].append(self)
         # Done
         return endpoint
 
-    def getUrlRule(self):
+    def getUrlRule(self, endpoint):
         """Get the url rule
         """
         # Get the methods
@@ -73,4 +72,4 @@ class WebEndpoint(object):
         else:
             methods = self.method
         # Create the Rule
-        return Rule(self.path, endpoint = self.id, methods = methods, host = self.host, subdomain = self.subdomain)
+        return Rule(self.path, endpoint = (self, endpoint), methods = methods, host = self.host, subdomain = self.subdomain)

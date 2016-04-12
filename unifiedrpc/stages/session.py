@@ -9,19 +9,19 @@
 
 """
 
-from unifiedrpc.protocol import Caller
+from unifiedrpc import context
 
-class SessionValidationCaller(Caller):
+class SessionValidator(object):
     """The session validation caller
     """
     def __init__(self, key, validator, error):
-        """Create a new SessionValidationCaller
+        """Create a new SessionValidator
         """
         self.key = key
         self.validator = validator
         self.error = error
 
-    def __call__(self, context, next):
+    def __call__(self, next):
         """Run the data validation
         """
         if not context.session or not self.key in context.session:

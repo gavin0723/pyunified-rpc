@@ -76,4 +76,4 @@ class PlainContentContainer(ContentContainer):
         Returns:
             A tuple (value object, header dict which key is string value is an object)
         """
-        return (self._value, self._headers)
+        return (self._value or tuple(), self._headers)

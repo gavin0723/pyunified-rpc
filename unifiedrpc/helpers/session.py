@@ -9,7 +9,7 @@
 
 """
 
-from unifiedrpc.caller import SessionValidationCaller
+from unifiedrpc.stages import SessionValidator
 
 def requiresession(key, validator = None, error = None):
     """Require session to satisfy a condition
@@ -21,7 +21,7 @@ def requiresession(key, validator = None, error = None):
     def decorate(endpoint):
         """The method to decorate the endpoint
         """
-        endpoint.callers.append((SessionValidationCaller(key, validator, error), 900))
+        endpoint.stage.addCaller(SessionValidator(key, validator, error), 900)
         # Done
         return endpoint
     # Done

@@ -4,35 +4,62 @@
 """The context object
 """
 
-from unifiedrpc import CONFIG_REQUEST_CONTENT_PARSER, CONFIG_RESPONSE_CONTENT_CONTAINER, CONFIG_RESPONSE_CONTENT_BUILDER
+from threading import local
+from contextlib import contextmanager
+
+from werkzeug.local import LocalProxy
+
+from unifiedrpc.definition import CONFIG_REQUEST_CONTENT_PARSER, CONFIG_RESPONSE_CONTENT_CONTAINER, CONFIG_RESPONSE_CONTENT_BUILDER
 
 class Context(object):
     """The context class
     Attributes:
         runtime                             The runtime object
         adapter                             The adapter of current request
-        request
-        session
-        endpoint                            The active endpoint
-        response                            The response of current request
+        request                             The request
+        session                             The session
+        response                            The response
     """
-    def __init__(self, runtime, adapter, request = None, session = None, endpoint = None, parameters = None, response = None):
+    def __init__(self, server, adapter, request = None, dispatchResult = None, session = None, response = None, meta = None):
         """Create a new context
         """
-        self.runtime = runtime
+        self.server = server
         self.adapter = adapter
         self.request = request
+        self.dispatchResult = dispatchResult
         self.session = session
         self.response = response
-        self.endpoint = endpoint
-        self.parameters = parameters
-        self.components = Components()
-        # Initialize the components: contentParser, contentBuilder, contentContainer
-        self.components.contentParser = runtime.configs.get(CONFIG_REQUEST_CONTENT_PARSER)
-        self.components.contentBuilder = runtime.configs.get(CONFIG_RESPONSE_CONTENT_BUILDER)
-        self.components.contentContainer = runtime.configs.get(CONFIG_RESPONSE_CONTENT_CONTAINER)
+        self.meta = meta or {}
 
-class Components(object):
-    """The components
+    def __getattr__(self, key):
+        """Get attribute which is not pre-defined, try the meta
+        """
+        if key in self.meta:
+            return self.meta[key]
+        # Raise error
+        raise AttributeError
+
+    def execution(self):
+        """Get the execution context
+        """
+        from execution import ExecutionContext
+        return ExecutionContext(
+            self.server,
+            self.adapter,
+            self.dispatchResult.service if self.dispatchResult else None,
+            self.dispatchResult.endpoint if self.dispatchResult else None
+            )
+
+_local = local()
+context = LocalProxy(lambda: _local.context if hasattr(_local, 'context') else None)
+
+def setContext(context):
+    """Set the current context object
     """
-    pass
+    _local.context = context
+
+def clearContext():
+    """Clear the current context object
+    """
+    if hasattr(_local, 'context'):
+        del _local.context

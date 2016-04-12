@@ -24,63 +24,32 @@ class BinaryContentBuilder(ContentBuilder):
         mime.IMAGE_PNG,
         ]
 
-    def isSupportMimeType(self, mimeType):
-        """Check if the current content builder could support the specified mimeType
-        """
-        return mimeType.lower() in self.SUPPORT_MIMETYPES
+    BLOCK_SIZE = 4096
 
-    def build(self, context):
+    def build(self, response, values):
         """Build the content
-        Parameters:
-            context                         The Context object
-        Returns:
-            The build value
         """
-        if context.response.container:
-            # Good, get the value and headers
-            value, headers = context.response.container.dump()
-            if headers:
-                self.applyHeaderResponse(headers, context)
+        for value in values:
             if isinstance(value, (file, StringIO.StringIO, cStringIO.InputType)):
                 # A file like stream object
-                return StreamContentWrapper(value)
+                try:
+                    while True:
+                        buffer = value.read(self.BLOCK_SIZE)
+                        if buffer:
+                            yield buffer
+                        else:
+                            break
+                except EOFError:
+                    pass
+                except:
+                    self.logger.exception('Iterate read stream error')
+                finally:
+                    try:
+                        value.close()
+                    except:
+                        self.logger.exception('Failed to close stream')
             elif isinstance(value, basestring):
                 # A string
-                return (value, )
-            elif value is None:
-                return ('', )
+                yield value
             else:
-                raise ValueError('No supported value [%s] of type [%s]' % (value, type(value).__name__))
-
-class StreamContentWrapper(object):
-    """The file like stream object content wrapper
-    """
-    BLOCK_SIZE  = 4096
-
-    logger = logging.getLogger('unifiedrpc.content.builder.binary.file')
-
-    def __init__(self, fd):
-        """Create a new FileContentWrapper
-        """
-        self.fd = fd
-
-    def __iter__(self):
-        """Iterate file content
-        """
-        try:
-            while True:
-                buffer = self.fd.read(self.BLOCK_SIZE)
-                if buffer:
-                    yield buffer
-                else:
-                    break
-        except EOFError:
-            pass
-        except:
-            self.logger.exception('Iterate read stream error')
-        finally:
-            try:
-                self.fd.close()
-            except:
-                self.logger.exception('Failed to close stream')
-
+                raise ValueError('Unsupported value type [%s] for binary content builder' % type(value).__name__)

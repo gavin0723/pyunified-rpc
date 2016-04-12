@@ -17,10 +17,6 @@ class WebRequest(Request, ProtocolRequest):
     """The web request class
     Attributes:
         queryParams                         The query parameters
-        requestContent                      The request content, RequestContent object
-                                            NOTE:
-                                                This class will only parse the necessary data structure in header but request body itself
-        acceptContent                       The accept content, AcceptContent object
     """
     def __init__(self, environ):
         """Create a new WebRequest
@@ -31,16 +27,17 @@ class WebRequest(Request, ProtocolRequest):
         # NOTE:
         #   Here, the value of queryParams a list: key -> [ value ]
         #   We will not change this value in order to support multiple values of a query parameter
-        self.queryParams = self.parseQueryParameter()
+        self.queryParams = self._parseQueryParameter()
         # Super for protocol request
-        ProtocolRequest.__init__(self,
+        ProtocolRequest.__init__(
+            self,
             self.headers,
             self.queryParams,
-            self.parseRequestContent(),
-            self.parseAcceptContent()
+            self._parseContent(),
+            self._parseAccept()
             )
 
-    def parseQueryParameter(self):
+    def _parseQueryParameter(self):
         """Parse the query parameters
         Returns:
             A dict which key is parameter name value is a list of parameter value
@@ -48,7 +45,7 @@ class WebRequest(Request, ProtocolRequest):
         if self.query_string:
             return urlparse.parse_qs(self.query_string)
 
-    def parseRequestContent(self):
+    def _parseContent(self):
         """Parse content type
         Returns:
             RequestContent object
@@ -61,7 +58,7 @@ class WebRequest(Request, ProtocolRequest):
         # Send it
         return RequestContent(mimeType, encoding, length, params, self.stream)
 
-    def parseAcceptContent(self):
+    def _parseAccept(self):
         """Parse accept
         Returns:
             A list of AcceptContent

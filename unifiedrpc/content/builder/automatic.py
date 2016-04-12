@@ -22,30 +22,16 @@ class AutomaticContentBuilder(ContentBuilder):
         """
         return self.builders.keys()
 
-    def isSupportMimeType(self, mimeType):
-        """Check if the current content builder could support the specified mimeType
-        """
-        return mimeType in self.builders
-
-    def build(self, context):
+    def build(self, response, values):
         """Build the content
-        NOTE:
-            This method should set the context properly
-        Parameters:
-            context                         The Context object
-        Returns:
-            Nothing
         """
-        mimeType = context.response.mimeType.lower()
-        if not mimeType:
-            mimeType = self.DEFAULT_MIME_TYPE
+        mimeType = response.mimeType.lower() or self.DEFAULT_MIME_TYPE
         if not mimeType in self.builders:
-            raise ValueError('Unsupported mime type [%s]' % context.response.mimeType)
+            raise ValueError('Unsupported mime type [%s] for automatic content builder' % response.mimeType)
         # Build
-        return self.builders[mimeType].build(context)
+        return self.builders[mimeType].build(response, values)
 
     def add(self, builder, mimeType):
         """Add a builder
         """
         self.builders[mimeType] = builder
-

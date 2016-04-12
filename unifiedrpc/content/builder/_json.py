@@ -17,31 +17,22 @@ class JsonContentBuilder(ContentBuilder):
         mime.APPLICATION_JSON,
     ]
 
-    def isSupportMimeType(self, mimeType):
-        """Check if the current content builder could support the specified mimeType
-        """
-        return mimeType.lower() in self.SUPPORT_MIMETYPES
-
-    def build(self, context):
+    def build(self, response, values):
         """Build the content
-        NOTE:
-            This method should set the context properly
-        Parameters:
-            context                         The Context object
-        Returns:
-            The built content
         """
-        if context.response.container:
-            # Good, get the value and headers
-            value, headers = context.response.container.dump()
-            if headers:
-                self.applyHeaderResponse(headers, context)
-            if not context.response.encoding:
-                raise ValueError('Require response encoding')
-            if value is None:
-                return '{}'
-            elif isinstance(value, (dict, tuple, list)):
-                return json.dumps(value, ensure_ascii = False).encode(context.response.encoding)
+        # Get all results
+        values = list(values)
+        # Check the values
+        if len(values) == 0:
+            # An empty response
+            yield '{}'
+        elif len(values) == 1:
+            # Good, encode the value
+            value = values[0]
+            if isinstance(value, (dict, tuple, list)):
+                yield json.dumps(value, ensure_ascii = False).encode(response.encoding)
             else:
-                raise ValueError('Unsupported response value type [%s]' % type(value).__name__)
-
+                raise ValueError('Unsupported value type [%s] for json content builder' % type(value).__name__)
+        else:
+            # Too many values
+            raise ValueError('Too many values [%s] returned for json content builder' % len(values))

@@ -10,26 +10,14 @@ class ContentBuilder(object):
     def isSupportMimeType(self, mimeType):
         """Check if the current content builder could support the specified mimeType
         """
-        raise NotImplementedError
+        return mimeType.lower() in self.SUPPORT_MIMETYPES
 
-    def build(self, context):
+    def build(self, response, container):
         """Build the content
-        NOTE:
-            This method should set the context properly
         Parameters:
-            context                         The Context object
+            response                            The Response object
+            container                           The Container object
         Returns:
-            Nothing
-        """
-        raise NotImplementedError
-
-    def applyHeaderResponse(self, headers, context):
-        """Apply header response
-        """
-        for header, value in headers.iteritems():
-            context.response.headers[header] = value
-
-    def encodeHeaderValue(self, value):
-        """Encode the header value
+            The build value
         """
         raise NotImplementedError

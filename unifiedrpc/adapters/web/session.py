@@ -111,8 +111,8 @@ class CookieSessionManager(SessionManager):
                     secure = self.secure,
                     httponly = self.httpOnly
                     )
+
     def clean(self, response):
         """Clean session
         """
         response.set_cookie(self.key, value = '', max_age = 0, expires = datetime.now())
-
