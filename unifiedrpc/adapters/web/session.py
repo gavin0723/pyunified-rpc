@@ -9,6 +9,7 @@
 
 """
 
+from functools import partial
 from datetime import datetime
 
 from unifiedrpc.protocol import Session, SessionManager
@@ -63,6 +64,12 @@ class SecureCookieSession(Session):
         """Dump to string
         """
         return self.cookie.serialize()
+
+    @classmethod
+    def instance(cls, secret):
+        """Return an SecureCookieSession instance method to create session
+        """
+        return partial(SecureCookieSession, secret)
 
 class CookieSessionManager(SessionManager):
     """The cookie session manager
