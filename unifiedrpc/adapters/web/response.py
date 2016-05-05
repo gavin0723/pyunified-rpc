@@ -9,14 +9,18 @@
 
 """
 
+from Cookie import SimpleCookie
+
 from unifiedrpc.protocol import Response
 
 class WebResponse(Response):
     """The web response
     """
-    def __init__(self, status = 200, **kwargs):
+    def __init__(self, status = 200, cookies = None, **kwargs):
         """Create a new WebResponse
         """
         self.status = status
+        self.cookies = cookies or SimpleCookie()
         # Super
         super(WebResponse, self).__init__(**kwargs)
+

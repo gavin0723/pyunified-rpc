@@ -239,7 +239,7 @@ class EndpointExecutionContext(object):
                 context.response.content.executionResult = createResponseResult(callStack())
             except Exception as error:
                 # Only log error when debugging
-                if self.logger.isEnabledFor(logging.DEBUG):
+                if not isinstance(error, RPCError):
                     self.logger.exception('Error occurred when executing calling stage')
                 # Call the on error
                 if not self.handleError(error):

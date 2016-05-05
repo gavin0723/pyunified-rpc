@@ -9,6 +9,8 @@
 
 """
 
+from Cookie import SimpleCookie
+
 from unifiedrpc.errors import NotAcceptableError, ERRCODE_NOTACCEPTABLE_NO_SUPPORTED_MIMETYPES
 from unifiedrpc.definition import CONFIG_RESPONSE_MIMETYPE, CONFIG_RESPONSE_ENCODING, CONFIG_RESPONSE_CONTENT_CONTAINER, CONFIG_RESPONSE_CONTENT_BUILDER
 from unifiedrpc.content.builder import TextContentBuilder
@@ -22,13 +24,14 @@ class Response(object):
     DEFAULT_CONTENT_CONTAINER           = PlainContentContainer
     DEFAULT_CONTENT_BUILDER             = TextContentBuilder
 
-    def __init__(self, headers = None, content = None, mimeType = None, encoding = None):
+    def __init__(self, headers = None, content = None, mimeType = None, encoding = None, cookies = None):
         """Create a new Response
         """
         self.headers = headers or {}
         self.content = content or ResponseContent()
         self.mimeType = mimeType
         self.encoding = encoding
+        self.cookies = cookies or SimpleCookie()
 
     @classmethod
     def getEncoding(cls, request, response, execution):

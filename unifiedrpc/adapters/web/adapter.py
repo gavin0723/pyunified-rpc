@@ -197,6 +197,26 @@ class WebAdapter(Adapter):
                 response = responseValue,
                 content_type =  getContentType(context.response.mimeType, context.response.encoding)
                 )
+            # Set cookies
+            if context.response.cookies and len(context.response.cookies) > 0:
+                for key in context.response.cookies:
+                    cookie = context.response.cookies[key]
+                    # Get set cookie params
+                    params = { 'value': cookie.value }
+                    if cookie['domain'] != '':
+                        params['domain'] = cookie['domain']
+                    if cookie['secure'] != '':
+                        params['secure'] = cookie['secure']
+                    if cookie['expires'] != '':
+                        params['expires'] = cookie['expires']
+                    if cookie['max-age'] != '':
+                        params['max_age'] = cookie['max-age']
+                    if cookie['path'] != '':
+                        params['path'] = cookie['path']
+                    if cookie['httponly'] != '':
+                        params['httponly'] = cookie['httponly']
+                    # Set it
+                    response.set_cookie(key, **params)
             # Send header and body
             for _v in response(environ, startResponse):
                 yield _v
