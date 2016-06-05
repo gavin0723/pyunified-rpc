@@ -15,6 +15,9 @@ The known configs:
 import logging
 import traceback
 
+from os import remove
+from os.path import exists
+
 from werkzeug.routing import Map
 from werkzeug.wrappers import Response as WKResponse
 from werkzeug.exceptions import HTTPException, NotFound, MethodNotAllowed
@@ -48,7 +51,7 @@ class WebAdapter(Adapter):
 
     DEFAULT_REQUEST_ENCODING    = 'utf8'
 
-    def __init__(self, host = '0.0.0.0', port = 8080, configs = None, stage = None):
+    def __init__(self, host = '0.0.0.0', port = 8080, keyFile = None, certFile = None, caCerts = None, configs = None, stage = None):
         """Create a new WebAdapter
         Parameters:
             host                        The bind host
@@ -64,6 +67,9 @@ class WebAdapter(Adapter):
         # Set basic attributes
         self._host = host
         self._port = port
+        self._keyFile = keyFile
+        self._certFile = certFile
+        self._caCerts = caCerts
         self._urlMapper = None       # A werkzeug.routing.Map object
         # Super
         super(WebAdapter, self).__init__(configs, stage)
@@ -362,12 +368,18 @@ class GeventWebAdapter(WebAdapter):
         # Super
         super(GeventWebAdapter, self).__start__()
         # Start gevent wsgi server
-        geventWSGIServer = pywsgi.WSGIServer(
-            (self._host, self._port),
-            self,       # The application callable object
-            log = GeventLogAdapter(self.logger, logging.INFO),
-            error_log = GeventLogAdapter(self.logger, logging.ERROR)
+        kwargs = dict(
+            listener    = (self._host, self._port),
+            application = self,
+            log         = GeventLogAdapter(self.logger, logging.INFO),
+            error_log   = GeventLogAdapter(self.logger, logging.ERROR)
             )
+        if self._certFile and self._keyFile:
+            kwargs['certfile'] = self._certFile
+            kwargs['keyfile'] = self._keyFile
+        if self._caCerts:
+            kwargs['ca_certs'] = self._caCerts
+        geventWSGIServer = pywsgi.WSGIServer(**kwargs)
         geventWSGIServer.start()
         # Good, started
         self._geventWSGIServer = geventWSGIServer
@@ -379,6 +391,68 @@ class GeventWebAdapter(WebAdapter):
         """
         # Super
         super(GeventWebAdapter, self).__stop__()
+        # Stop
+        self._geventWSGIServer.close()
+        self._geventWSGIServer = None
+
+class GeventUnixSocketWebAdapter(WebAdapter):
+    """The gevent unix socket web adapter
+    This is a gevent-bound unix socket web adapter which should be used in gevent rpc server
+    """
+    logger = logging.getLogger('unifiedrpc.adapter.web.gevent')
+
+    def __init__(self, socketFilename, *args, **kwargs):
+        """Create a new GeventUnixSocketWebAdapter
+        """
+        self._sockFilename = socketFilename
+        self._geventWSGIServer = None
+        # Super
+        super(GeventUnixSocketWebAdapter, self).__init__(*args, **kwargs)
+
+    def __start__(self):
+        """Start
+        """
+        from gevent import pywsgi, socket
+        # Define the log adapter
+        class GeventLogAdapter(pywsgi.LoggingLogAdapter):
+            """The gevent log adapter
+            """
+            def write(self, msg):
+                """Write the message
+                """
+                super(GeventLogAdapter, self).write(msg.strip())
+        # Super
+        super(GeventUnixSocketWebAdapter, self).__start__()
+        # Create the socket and bind to the file
+        listener = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        if exists(self._sockFilename):
+            remove(self._sockFilename)
+        listener.bind(self._sockFilename)
+        listener.listen(1024)
+        # Start gevent wsgi server
+        kwargs = dict(
+            listener    = listener,
+            application = self,
+            log         = GeventLogAdapter(self.logger, logging.INFO),
+            error_log   = GeventLogAdapter(self.logger, logging.ERROR)
+            )
+        if self._certFile and self._keyFile:
+            kwargs['certfile'] = self._certFile
+            kwargs['keyfile'] = self._keyFile
+        if self._caCerts:
+            kwargs['ca_certs'] = self._caCerts
+        geventWSGIServer = pywsgi.WSGIServer(**kwargs)
+        geventWSGIServer.start()
+        # Good, started
+        self._geventWSGIServer = geventWSGIServer
+        # Log it
+        self.logger.info('Gevent WSGI server starts service at [%s:%d]', self._host, self._port)
+
+    def __stop__(self):
+        """Close current adapter
+        """
+        # Super
+        super(GeventUnixSocketWebAdapter, self).__stop__()
         # Stop
         self._geventWSGIServer.close()
         self._geventWSGIServer = None

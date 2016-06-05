@@ -8,6 +8,6 @@ This adapter implements a full http web service functionalities that could be us
 """
 
 from helper import redirect
-from adapter import WebAdapter, GeventWebAdapter
+from adapter import WebAdapter, GeventWebAdapter, GeventUnixSocketWebAdapter
 from session import SecureCookieSession, CookieSessionManager
 from decorators import *
