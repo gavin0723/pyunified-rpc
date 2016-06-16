@@ -10,12 +10,13 @@
 """
 
 from params import paramtype
+from secure import requiressl
 from content import requiredata, container, mimetype, encoding
 from session import requiresession
 
 __all__ = [
         'paramtype',
+        'requiressl',
         'requiredata', 'container', 'mimetype', 'encoding',
         'requiresession',
         ]
-

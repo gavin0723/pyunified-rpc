@@ -4,6 +4,8 @@
 """The plain content container
 """
 
+from unifiedrpc.util import json
+
 from base import ContentContainer
 
 class PlainContentContainer(ContentContainer):
@@ -41,7 +43,7 @@ class PlainContentContainer(ContentContainer):
     def setError(self, code, reason, detail = None):
         """Set the error
         """
-        self._headers[self.KEY_META_ERROR] = { 'code': code, 'reason': reason, 'detail': detail }
+        self._headers[self.KEY_META_ERROR] = json.dumps({ 'code': code, 'reason': reason, 'detail': detail })
 
     def cleanError(self):
         """Clean the error

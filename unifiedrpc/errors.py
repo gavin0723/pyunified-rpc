@@ -66,10 +66,6 @@ class NotAcceptableError(RPCError):
 class MethodNotAllowedError(RPCError):
     """The method is not allowed
     """
-    def __init__(self, code = None, reason = None, detail = None):
-        """Create a new MethodNotAllowedError
-        """
-        super(MethodNotAllowedError, self).__init__(code or ERRCODE_METHODNOTALLOWED, reason, detail)
 
 class RequestTimeoutError(RPCError):
     """The request timeout error

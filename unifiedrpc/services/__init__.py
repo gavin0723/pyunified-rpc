@@ -10,6 +10,6 @@
 """
 
 from ping import PingService
+from staticfile import StaticFileService
 
-__all__ = [ 'PingService' ]
-
+__all__ = [ 'PingService', 'StaticFileService' ]

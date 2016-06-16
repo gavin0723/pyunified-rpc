@@ -16,7 +16,9 @@ class TextContentBuilder(ContentBuilder):
     SUPPORT_MIMETYPES = [
         'text/plain',
         mime.APPLICATION_XHTML_XML,
+        'application/x-javascript',
         mime.TEXT_HTML,
+        mime.TEXT_CSS,
         mime.TEXT_MARKDOWN,
     ]
 

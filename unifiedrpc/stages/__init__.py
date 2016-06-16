@@ -4,8 +4,9 @@
 """The callers
 """
 
+from secure import SSLValidator
 from content import DataValidator
-from parameter import ParameterConverter
 from session import SessionValidator
+from parameter import ParameterConverter
 
-__init__ = [ 'DataValidator', 'ParameterConverter', 'SessionValidator' ]
+__init__ = [ 'DataValidator', 'ParameterConverter', 'SessionValidator', 'SSLValidator' ]
