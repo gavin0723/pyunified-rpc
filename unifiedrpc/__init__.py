@@ -14,11 +14,6 @@
 
 """
 
-try:
-    from __version__ import __version__
-except ImportError:
-    __version__ = 'undetermined'
-
 from errors import *
 from server import Server
 from protocol import Service, context

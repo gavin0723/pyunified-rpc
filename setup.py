@@ -13,15 +13,12 @@ import sys
 reload(sys)
 sys.setdefaultencoding('utf8')
 
-import unifiedrpc
-
 from setuptools import setup, find_packages
 
 requirements = [ x.strip() for x in open('requirements.txt').readlines() ]
 
 setup(
     name = 'unifiedrpc',
-    version = unifiedrpc.__version__,
     author = 'lipixun',
     author_email = 'lipixun@outlook.com',
     url = 'https://github.com/lipixun/pyunified-rpc',
