@@ -47,8 +47,8 @@ class Connection(object):
             notBefore = parsedate(cert['notBefore']) if cert.get('notBefore') else None
             notAfter = parsedate(cert['notAfter']) if cert.get('notAfter') else None
             # Get the name
-            subjectNames = dict(map(lambda x: x[0], cert['subject'])) if cert.get('subject') else None
-            issuerNames = dict(map(lambda x: x[0], cert['issuer'])) if cert.get('issuer') else None
+            subjectNames = dict(map(lambda x: x[0], cert['subject'])) if cert.get('subject') else {}
+            issuerNames = dict(map(lambda x: x[0], cert['issuer'])) if cert.get('issuer') else {}
             # Get the subject alternative name
             subjectAltName = cert.get('subjectAltName')
             if subjectAltName:
