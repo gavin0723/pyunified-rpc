@@ -19,3 +19,5 @@ from server import Server
 from protocol import Service, context
 from decorators import *
 from definition import *
+
+__version__ = "1.0"
