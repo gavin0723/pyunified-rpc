@@ -24,3 +24,8 @@ class WebResponse(Response):
         # Super
         super(WebResponse, self).__init__(**kwargs)
 
+    def redirect(self, location, code = 302):
+        """Redirect this response
+        """
+        self.headers["Location"] = location
+        self.status = code
