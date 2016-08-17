@@ -18,19 +18,24 @@ class Connection(object):
         """Create a new Connection
         """
         self.socket = environ.get('wsgi.socket')
-        # Set the info
-        endpoint = self.socket.getpeername()
-        if endpoint and isinstance(endpoint, tuple):
-            host, port = self.socket.getpeername()
-            self.remote = RemoteInfo(host, port)
+        if self.socket:
+            # Set the info
+            endpoint = self.socket.getpeername()
+            if endpoint and isinstance(endpoint, tuple):
+                host, port = self.socket.getpeername()
+                self.remote = RemoteInfo(host, port)
+            else:
+                self.remote = RemoteInfo()
+            endpoint = self.socket.getsockname()
+            if endpoint and isinstance(endpoint, tuple):
+                host, port = endpoint
+                self.local = LocalInfo(host, port)
+            else:
+                self.local = LocalInfo()
         else:
-            self.remote = RemoteInfo()
-        endpoint = self.socket.getsockname()
-        if endpoint and isinstance(endpoint, tuple):
-            host, port = endpoint
-            self.local = LocalInfo(host, port)
-        else:
-            self.local = LocalInfo()
+            # Socket object not found
+            self.local = None
+            self.remote = None
         # Check ssl
         if environ.get('wsgi.url_scheme') == 'https':
             self.ssl = True

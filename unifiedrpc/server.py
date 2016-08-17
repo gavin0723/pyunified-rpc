@@ -63,6 +63,12 @@ class Server(object):
             self._configs[CONFIG_RESPONSE_CONTENT_BUILDER] = createDefaultContentBuilder()
 
     @property
+    def stage(self):
+        """Get the execution stage
+        """
+        return self._stage
+
+    @property
     def started(self):
         """Get if the adapter is started
         """
